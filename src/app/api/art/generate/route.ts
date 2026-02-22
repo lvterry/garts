@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { createMoodAnalyzer } from '@/lib/ai';
 import { generateArtParams, artParamsToJSON } from '@/lib/art-generator';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
