@@ -46,10 +46,10 @@ export async function POST(request: NextRequest) {
       artData: JSON.parse(artwork.artData),
       createdAt: artwork.createdAt.toISOString(),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating art:', error);
     return NextResponse.json(
-      { error: 'Failed to generate art' },
+      { error: error.message || 'Failed to generate art' },
       { status: 500 }
     );
   }
