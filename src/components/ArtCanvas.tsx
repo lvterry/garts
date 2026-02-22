@@ -37,11 +37,11 @@ export default function ArtCanvas({ params, width = 500, height = 500 }: ArtCanv
         style={{
           width,
           height,
-          backgroundColor: '#1a1a2e',
+          backgroundColor: '#18181b',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#666',
+          color: '#52525b',
         }}
       >
         Loading...
@@ -56,7 +56,7 @@ export default function ArtCanvas({ params, width = 500, height = 500 }: ArtCanv
   };
 
   const draw = (p5: any) => {
-    p5.background(26, 26, 46);
+    p5.background(24, 24, 27);
     const { colors, shapeType, complexity, motionSpeed, chaosLevel } = params;
 
     const numShapes = complexity * 8;
@@ -177,7 +177,6 @@ export default function ArtCanvas({ params, width = 500, height = 500 }: ArtCanv
         height,
         borderRadius: 12,
         overflow: 'hidden',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
       }}
     >
       <Sketch setup={setup} draw={draw} />

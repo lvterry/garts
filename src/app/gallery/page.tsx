@@ -7,7 +7,7 @@ import { ArtParams } from '@/components/ArtCanvas';
 
 const ArtCanvas = dynamic(() => import('@/components/ArtCanvas'), {
   ssr: false,
-  loading: () => <div style={{ aspectRatio: 1, background: 'var(--bg-tertiary)' }} />,
+  loading: () => <div className="aspect-square bg-zinc-900" />,
 });
 
 interface ArtworkData {
@@ -42,29 +42,29 @@ export default function GalleryPage() {
 
   return (
     <div>
-      <div className="page-header">
-        <h1 className="page-title">Gallery</h1>
-        <p className="page-subtitle">Browse all generated artworks</p>
+      <div className="mb-12">
+        <h1 className="text-4xl font-semibold tracking-tight mb-2">Gallery</h1>
+        <p className="text-gray-400">Browse all generated artworks</p>
       </div>
 
       {loading ? (
-        <div className="loading">Loading...</div>
+        <div className="text-center py-12 text-zinc-500">Loading...</div>
       ) : error ? (
-        <div className="error">{error}</div>
+        <div className="text-center py-12 text-red-400">{error}</div>
       ) : artworks.length === 0 ? (
-        <div className="empty-state">
-          <p>No artworks yet. Generate your first art above!</p>
+        <div className="text-center py-20 text-gray-500">
+          No artworks yet. Generate your first art above!
         </div>
       ) : (
-        <div className="grid">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {artworks.map((artwork) => (
-            <Link href={`/art/${artwork.id}`} key={artwork.id} className="card">
-              <div className="card-image">
+            <Link href={`/art/${artwork.id}`} key={artwork.id} className="block bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-zinc-700 transition-all hover:-translate-y-1">
+              <div className="aspect-square bg-zinc-900">
                 <ArtCanvas params={artwork.artData} width={400} height={400} />
               </div>
-              <div className="card-content">
-                <span className="card-title">{artwork.keyword}</span>
-                <span className="card-meta">{artwork.mood}</span>
+              <div className="px-4 py-3 flex justify-between items-center">
+                <span className="font-medium">{artwork.keyword}</span>
+                <span className="text-sm text-gray-400 capitalize">{artwork.mood}</span>
               </div>
             </Link>
           ))}

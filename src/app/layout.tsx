@@ -13,20 +13,27 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <header className="header">
-          <nav className="nav">
-            <a href="/" className="logo">
-              <div className="logo-icon" />
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet" />
+      </head>
+      <body className="bg-black text-white antialiased">
+        <header className="fixed top-0 left-0 right-0 h-16 bg-black/80 backdrop-blur-xl border-b border-white/10 z-50">
+          <nav className="max-w-[1200px] mx-auto h-full px-6 flex items-center justify-between">
+            <a href="/" className="flex items-center gap-2 text-sm font-semibold tracking-tight">
+              <div className="w-6 h-6 bg-gradient-to-br from-white to-gray-500 rounded-lg" />
               Garts
             </a>
-            <div className="nav-links">
-              <a href="/">Generate</a>
-              <a href="/gallery">Gallery</a>
+            <div className="flex items-center gap-8">
+              <a href="/" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Generate</a>
+              <a href="/gallery" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Gallery</a>
             </div>
           </nav>
         </header>
-        <main className="main">{children}</main>
+        <main className="max-w-[1200px] mx-auto px-6 pt-32 pb-20 min-h-screen">
+          {children}
+        </main>
       </body>
     </html>
   );

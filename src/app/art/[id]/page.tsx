@@ -59,14 +59,14 @@ export default function ArtDetailPage() {
   };
 
   if (loading) {
-    return <div className="loading">Loading...</div>;
+    return <div className="text-center py-12 text-zinc-500">Loading...</div>;
   }
 
   if (error || !artwork) {
     return (
-      <div style={{ textAlign: 'center', padding: '48px' }}>
-        <p className="error" style={{ marginBottom: 16 }}>{error || 'Artwork not found'}</p>
-        <Link href="/gallery" className="btn btn-secondary">
+      <div className="text-center py-12">
+        <p className="text-red-400 mb-4">{error || 'Artwork not found'}</p>
+        <Link href="/gallery" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">
           Back to Gallery
         </Link>
       </div>
@@ -74,39 +74,41 @@ export default function ArtDetailPage() {
   }
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto' }}>
-      <Link href="/gallery" className="detail-back">
+    <div className="max-w-3xl mx-auto">
+      <Link href="/gallery" className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white mb-6 transition-colors">
         ← Back to Gallery
       </Link>
 
-      <div className="detail-content">
-        <div className="detail-artwork">
+      <div className="grid md:grid-cols-[1fr_280px] gap-12">
+        <div className="aspect-square bg-zinc-900 rounded-xl overflow-hidden">
           <ArtCanvas params={artwork.artData} width={500} height={500} />
         </div>
 
-        <div className="detail-info">
-          <div className="info-item">
-            <p className="info-label">Keyword</p>
-            <p className="info-value">{artwork.keyword}</p>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+          <div className="pb-4 border-b border-zinc-800">
+            <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Keyword</p>
+            <p className="font-medium">{artwork.keyword}</p>
           </div>
-          <div className="info-item">
-            <p className="info-label">Mood</p>
-            <p className="info-value mood">{artwork.mood}</p>
+          <div className="py-4 border-b border-zinc-800">
+            <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Mood</p>
+            <p className="font-medium capitalize text-gray-300">{artwork.mood}</p>
           </div>
-          <div className="info-item">
-            <p className="info-label">Created</p>
-            <p className="info-value">{new Date(artwork.createdAt).toLocaleDateString()}</p>
+          <div className="py-4 border-b border-zinc-800">
+            <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Created</p>
+            <p className="font-medium text-gray-300">{new Date(artwork.createdAt).toLocaleDateString()}</p>
           </div>
-          <div className="info-item">
-            <p className="info-label">Style</p>
-            <p className="info-value">{artwork.artData.shapeType}</p>
+          <div className="pt-4">
+            <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Style</p>
+            <p className="font-medium text-gray-300 capitalize">{artwork.artData.shapeType}</p>
           </div>
 
-          <div className="detail-actions">
-            <button onClick={handleDelete} disabled={deleting} className="btn btn-danger">
-              {deleting ? 'Deleting...' : 'Delete'}
-            </button>
-          </div>
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="w-full mt-6 px-4 py-2.5 text-sm font-medium text-red-400 border border-red-400/20 rounded-lg hover:bg-red-400/10 transition-colors disabled:opacity-50"
+          >
+            {deleting ? 'Deleting...' : 'Delete'}
+          </button>
         </div>
       </div>
     </div>
