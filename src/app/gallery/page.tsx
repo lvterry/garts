@@ -1,7 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import GalleryGrid, { ArtworkData } from '@/components/GalleryGrid';
+import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import { ArtParams } from '@/components/ArtCanvas';
+
+const ArtCanvas = dynamic(() => import('@/components/ArtCanvas'), {
+  ssr: false,
+  loading: () => <div style={{ aspectRatio: 1, background: 'var(--bg-tertiary)' }} />,
+});
+
+interface ArtworkData {
+  id: string;
+  keyword: string;
+  mood: string;
+  artData: ArtParams;
+  createdAt: string;
+}
 
 export default function GalleryPage() {
   const [artworks, setArtworks] = useState<ArtworkData[]>([]);
@@ -26,37 +41,35 @@ export default function GalleryPage() {
   }, []);
 
   return (
-    <div className="gallery-page">
-      <h1>Art Gallery</h1>
-      <p className="subtitle">Browse all generated artworks</p>
+    <div>
+      <div className="page-header">
+        <h1 className="page-title">Gallery</h1>
+        <p className="page-subtitle">Browse all generated artworks</p>
+      </div>
 
       {loading ? (
         <div className="loading">Loading...</div>
       ) : error ? (
         <div className="error">{error}</div>
+      ) : artworks.length === 0 ? (
+        <div className="empty-state">
+          <p>No artworks yet. Generate your first art above!</p>
+        </div>
       ) : (
-        <GalleryGrid artworks={artworks} />
+        <div className="grid">
+          {artworks.map((artwork) => (
+            <Link href={`/art/${artwork.id}`} key={artwork.id} className="card">
+              <div className="card-image">
+                <ArtCanvas params={artwork.artData} width={400} height={400} />
+              </div>
+              <div className="card-content">
+                <span className="card-title">{artwork.keyword}</span>
+                <span className="card-meta">{artwork.mood}</span>
+              </div>
+            </Link>
+          ))}
+        </div>
       )}
-
-      <style jsx>{`
-        .gallery-page h1 {
-          font-size: 36px;
-          margin-bottom: 8px;
-        }
-        .subtitle {
-          color: #aaaaaa;
-          margin-bottom: 24px;
-        }
-        .loading,
-        .error {
-          text-align: center;
-          padding: 48px;
-          color: #666;
-        }
-        .error {
-          color: #ff6b6b;
-        }
-      `}</style>
     </div>
   );
 }

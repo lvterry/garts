@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
-import KeywordInput from '@/components/KeywordInput';
 import { ArtParams } from '@/components/ArtCanvas';
 
 const ArtCanvas = dynamic(() => import('@/components/ArtCanvas'), {
@@ -31,10 +30,31 @@ async function generateArt(keyword: string): Promise<GenerateResult> {
 }
 
 export default function Home() {
+  const [keyword, setKeyword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [generatedArt, setGeneratedArt] = useState<GenerateResult | null>(null);
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!keyword.trim()) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const art = await generateArt(keyword.trim());
+      setGeneratedArt(art);
+      setKeyword('');
+    } catch (err) {
+      setError('Failed to generate art. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="home">
+    <div>
       <section className="hero">
         <h1 className="title">Generative Art from Your Mood</h1>
         <p className="subtitle">
@@ -42,79 +62,40 @@ export default function Home() {
         </p>
       </section>
 
-      <section className="generate-section">
-        <KeywordInput onGenerate={generateArt} />
+      <section className="section" style={{ display: 'flex', justifyContent: 'center' }}>
+        <form onSubmit={handleSubmit} className="form-group">
+          <input
+            type="text"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="Enter a keyword..."
+            className="input"
+            disabled={loading}
+            style={{ flex: 1 }}
+          />
+          <button type="submit" disabled={loading || !keyword.trim()} className="btn btn-primary">
+            {loading ? 'Generating...' : 'Generate'}
+          </button>
+        </form>
       </section>
 
+      {error && <p className="error">{error}</p>}
+
       {generatedArt && (
-        <section className="preview-section">
-          <h2>Your Generated Art</h2>
-          <div className="preview-container">
+        <section className="section">
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
             <ArtCanvas params={generatedArt.artData} width={500} height={500} />
           </div>
-          <div className="preview-actions">
-            <a href="/gallery" className="view-gallery-btn">
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ marginBottom: 8, color: 'var(--text-secondary)' }}>
+              <strong>{generatedArt.keyword}</strong> → <span style={{ textTransform: 'capitalize' }}>{generatedArt.mood}</span>
+            </p>
+            <a href="/gallery" className="btn btn-secondary">
               View in Gallery
             </a>
           </div>
         </section>
       )}
-
-      <style jsx>{`
-        .home {
-          display: flex;
-          flex-direction: column;
-          gap: 48px;
-        }
-        .hero {
-          text-align: center;
-        }
-        .title {
-          font-size: 48px;
-          font-weight: 700;
-          margin-bottom: 16px;
-          background: linear-gradient(135deg, #667eea, #f093fb);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-        .subtitle {
-          font-size: 18px;
-          color: #aaaaaa;
-          max-width: 500px;
-          margin: 0 auto;
-        }
-        .generate-section {
-          display: flex;
-          justify-content: center;
-        }
-        .preview-section {
-          text-align: center;
-        }
-        .preview-section h2 {
-          font-size: 24px;
-          margin-bottom: 24px;
-        }
-        .preview-container {
-          display: flex;
-          justify-content: center;
-        }
-        .preview-actions {
-          margin-top: 24px;
-        }
-        .view-gallery-btn {
-          display: inline-block;
-          padding: 12px 24px;
-          background: linear-gradient(135deg, #667eea, #764ba2);
-          border-radius: 8px;
-          text-decoration: none;
-          font-weight: 600;
-          transition: transform 0.2s;
-        }
-        .view-gallery-btn:hover {
-          transform: translateY(-2px);
-        }
-      `}</style>
     </div>
   );
 }

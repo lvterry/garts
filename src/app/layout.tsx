@@ -17,6 +17,7 @@ export default function RootLayout({
         <header className="header">
           <nav className="nav">
             <a href="/" className="logo">
+              <div className="logo-icon" />
               Garts
             </a>
             <div className="nav-links">
