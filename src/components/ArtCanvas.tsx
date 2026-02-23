@@ -34,6 +34,7 @@ function seededNoise(seed: number, x: number, y: number = 0): number {
 
 export default function ArtCanvas({ params, width = 500, height = 500 }: ArtCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
+  const p5Instance = useRef<any>(null);
   const [mounted, setMounted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,6 +53,13 @@ export default function ArtCanvas({ params, width = 500, height = 500 }: ArtCanv
       }
     }
     loadP5();
+
+    return () => {
+      if (p5Instance.current) {
+        p5Instance.current.remove();
+        p5Instance.current = null;
+      }
+    };
   }, []);
 
   if (!mounted) {
@@ -94,12 +102,16 @@ export default function ArtCanvas({ params, width = 500, height = 500 }: ArtCanv
   const { seed, colors, shapeType, complexity } = params;
 
   const setup = (p5: any) => {
-    p5.createCanvas(width, height).parent(canvasRef.current!);
+    p5Instance.current = p5;
+    if (!canvasRef.current) return;
+    p5.createCanvas(width, height).parent(canvasRef.current);
     p5.randomSeed(seed);
     p5.noiseSeed(seed);
   };
 
   const draw = (p5: any) => {
+    if (!canvasRef.current) return;
+    
     p5.background(24, 24, 27);
     
     const numShapes = complexity * 8;
@@ -200,7 +212,7 @@ export default function ArtCanvas({ params, width = 500, height = 500 }: ArtCanv
       
       p5.beginShape();
       for (let x = 0; x < w; x += 5) {
-        const y = yOffset + p5.sin(x * frequency) * amplitude;
+        const y = yOffset + Math.sin(x * frequency) * amplitude;
         p5.vertex(x, y);
       }
       p5.endShape();
