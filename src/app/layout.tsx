@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -18,16 +20,20 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="bg-black text-white antialiased">
-        <header className="fixed top-0 left-0 right-0 h-16 bg-black/80 backdrop-blur-xl border-b border-white/10 z-50">
+      <body className="bg-background text-foreground antialiased">
+        <header className="fixed top-0 left-0 right-0 h-16 bg-background/80 backdrop-blur-xl border-b border-border z-50">
           <nav className="max-w-[1200px] mx-auto h-full px-6 flex items-center justify-between">
-            <a href="/" className="flex items-center gap-2 text-sm font-semibold tracking-tight">
+            <Link href="/" className="flex items-center gap-2 text-sm font-semibold tracking-tight">
               <div className="w-6 h-6 bg-gradient-to-br from-white to-gray-500 rounded-lg" />
               Garts
-            </a>
-            <div className="flex items-center gap-8">
-              <a href="/" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Generate</a>
-              <a href="/gallery" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Gallery</a>
+            </Link>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" asChild>
+                <Link href="/">Generate</Link>
+              </Button>
+              <Button variant="ghost" asChild>
+                <Link href="/gallery">Gallery</Link>
+              </Button>
             </div>
           </nav>
         </header>
