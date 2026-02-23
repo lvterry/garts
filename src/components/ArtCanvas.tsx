@@ -1,11 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
 
-const Sketch = dynamic(() => import('react-p5').then((mod) => mod.default), {
-  ssr: false,
-});
+let Sketch: any = null;
+let p5Module: any = null;
 
 export interface ArtParams {
   seed: number;
@@ -26,9 +24,23 @@ interface ArtCanvasProps {
 export default function ArtCanvas({ params, width = 500, height = 500 }: ArtCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
+
+    async function loadP5() {
+      try {
+        if (!p5Module) {
+          p5Module = await import('react-p5');
+          Sketch = p5Module.default;
+        }
+      } catch (err) {
+        console.error('Failed to load p5:', err);
+        setError('Failed to load art canvas');
+      }
+    }
+    loadP5();
   }, []);
 
   if (!mounted) {
@@ -45,6 +57,25 @@ export default function ArtCanvas({ params, width = 500, height = 500 }: ArtCanv
         }}
       >
         Loading...
+      </div>
+    );
+  }
+
+  if (error || !Sketch) {
+    return (
+      <div
+        style={{
+          width,
+          height,
+          backgroundColor: '#18181b',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#52525b',
+          borderRadius: 12,
+        }}
+      >
+        {error || 'Loading canvas...'}
       </div>
     );
   }

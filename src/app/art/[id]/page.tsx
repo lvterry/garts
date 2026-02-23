@@ -4,12 +4,18 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { ArtParams } from '@/components/ArtCanvas';
+import type { ArtParams } from '@/components/ArtCanvas';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const ArtCanvas = dynamic(() => import('@/components/ArtCanvas'), {
   ssr: false,
+  loading: () => (
+    <div className="aspect-square bg-secondary rounded-xl flex items-center justify-center">
+      Loading canvas...
+    </div>
+  ),
 });
 
 interface ArtworkData {
@@ -85,7 +91,15 @@ export default function ArtDetailPage() {
 
       <div className="grid md:grid-cols-[1fr_280px] gap-12">
         <div className="aspect-square bg-secondary rounded-xl overflow-hidden">
-          <ArtCanvas params={artwork.artData} width={500} height={500} />
+          <ErrorBoundary
+            fallback={
+              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                Failed to load canvas
+              </div>
+            }
+          >
+            <ArtCanvas params={artwork.artData} width={500} height={500} />
+          </ErrorBoundary>
         </div>
 
         <Card>

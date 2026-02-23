@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { Artwork } from '@prisma/client';
+
+type ArtworkRecord = {
+  id: string;
+  keyword: string;
+  mood: string;
+  artData: string;
+  createdAt: Date;
+};
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +27,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     return NextResponse.json({
-      artworks: artworks.map((art: Artwork) => ({
+      artworks: artworks.map((art: ArtworkRecord) => ({
         id: art.id,
         keyword: art.keyword,
         mood: art.mood,
