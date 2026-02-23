@@ -243,11 +243,47 @@ function renderShapesForType(
   return elements;
 }
 
-export default function SvgArtCanvas({ params, width = DEFAULT_SIZE, height = DEFAULT_SIZE }: SvgArtCanvasProps) {
+function getLightness(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  return (max + min) / 2 * 100;
+}
+
+function getDarkestColor(colors: string[]): string {
+  let darkest = colors[0];
+  let minL = 100;
+  
+  for (const color of colors) {
+    try {
+      const l = getLightness(color);
+      if (l < minL) {
+        minL = l;
+        darkest = color;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return darkest;
+}
+
+function getBackgroundColor(colors: string[]): string {
+  try {
+    return getDarkestColor(colors);
+  } catch {
+    return '#18181b';
+  }
+}
+
+export default function SvgArtCanvas({ params }: SvgArtCanvasProps) {
+  const width = DEFAULT_SIZE;
+  const height = DEFAULT_SIZE;
   const { colors, shapeTypes, layerCount } = params;
   
-  const backgroundColor = colors.length >= 2 ? colors[1] : colors[0];
-  const gradientColor = colors.length >= 3 ? colors[2] : colors[0];
+  const backgroundColor = getBackgroundColor(colors);
   
   const shapeLayerOrder = ['waves', 'circles', 'spirals', 'triangles', 'lines'];
   const sortedShapes = [...shapeTypes].sort((a, b) => 
@@ -282,22 +318,10 @@ export default function SvgArtCanvas({ params, width = DEFAULT_SIZE, height = DE
       style={{
         display: 'block',
         borderRadius: 12,
-        backgroundColor: '#18181b',
+        backgroundColor: backgroundColor,
       }}
     >
-      <defs>
-        <linearGradient id={`bgGrad-${params.seed}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={backgroundColor} />
-          <stop offset="100%" stopColor={gradientColor} />
-        </linearGradient>
-        <radialGradient id={`centerGlow-${params.seed}`} cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor={colors[0]} stopOpacity="0.3" />
-          <stop offset="100%" stopColor="transparent" />
-        </radialGradient>
-      </defs>
-      
-      <rect x="0" y="0" width={width} height={height} fill={`url(#bgGrad-${params.seed})`} />
-      <rect x="0" y="0" width={width} height={height} fill={`url(#centerGlow-${params.seed})`} />
+      <rect x="0" y="0" width={width} height={height} fill={backgroundColor} opacity={0.9} />
       
       {renderAllLayers()}
     </svg>
