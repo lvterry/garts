@@ -1,9 +1,8 @@
-export type ArtAlgorithm = 'mixed' | 'single';
-
 export interface ArtParams {
   seed: number;
   mood: string;
   colors: string[];
+  backgroundColors: string[];
   shapeTypes: string[];
   complexity: number;
   motionSpeed: number;
@@ -13,7 +12,6 @@ export interface ArtParams {
   positionBias: 'center' | 'edge' | 'uniform';
   strokeWidth: number;
   layerCount: number;
-  algorithm: ArtAlgorithm;
 }
 
 interface ColorRanges {
@@ -29,6 +27,7 @@ interface ShapePoolItem {
 
 interface MoodParams {
   colorRanges: ColorRanges;
+  bgColorRanges: ColorRanges;
   shapePool: ShapePoolItem[];
   complexity: [number, number];
   motionSpeed: [number, number];
@@ -37,7 +36,8 @@ interface MoodParams {
 
 const moodToParams: Record<string, MoodParams> = {
   serene: {
-    colorRanges: { h: [180, 220], s: [30, 60], l: [75, 95] },
+    colorRanges: { h: [180, 220], s: [40, 70], l: [60, 85] },
+    bgColorRanges: { h: [200, 240], s: [20, 50], l: [12, 22] },
     shapePool: [
       { type: 'circles', weight: 0.5 },
       { type: 'waves', weight: 0.3 },
@@ -48,7 +48,8 @@ const moodToParams: Record<string, MoodParams> = {
     chaosLevel: [1, 3],
   },
   chaotic: {
-    colorRanges: { h: [0, 60], s: [70, 100], l: [60, 80] },
+    colorRanges: { h: [0, 60], s: [70, 100], l: [55, 80] },
+    bgColorRanges: { h: [0, 30], s: [40, 70], l: [10, 20] },
     shapePool: [
       { type: 'triangles', weight: 0.6 },
       { type: 'lines', weight: 0.4 },
@@ -58,7 +59,8 @@ const moodToParams: Record<string, MoodParams> = {
     chaosLevel: [7, 10],
   },
   joyful: {
-    colorRanges: { h: [30, 90], s: [60, 90], l: [65, 85] },
+    colorRanges: { h: [30, 90], s: [60, 90], l: [60, 80] },
+    bgColorRanges: { h: [20, 60], s: [30, 60], l: [15, 25] },
     shapePool: [
       { type: 'spirals', weight: 0.4 },
       { type: 'circles', weight: 0.35 },
@@ -69,7 +71,8 @@ const moodToParams: Record<string, MoodParams> = {
     chaosLevel: [4, 6],
   },
   melancholic: {
-    colorRanges: { h: [200, 240], s: [10, 30], l: [30, 55] },
+    colorRanges: { h: [200, 240], s: [20, 40], l: [40, 60] },
+    bgColorRanges: { h: [220, 260], s: [15, 35], l: [8, 18] },
     shapePool: [
       { type: 'waves', weight: 0.5 },
       { type: 'circles', weight: 0.3 },
@@ -80,7 +83,8 @@ const moodToParams: Record<string, MoodParams> = {
     chaosLevel: [2, 4],
   },
   energetic: {
-    colorRanges: { h: [10, 50], s: [80, 100], l: [60, 80] },
+    colorRanges: { h: [10, 50], s: [80, 100], l: [55, 75] },
+    bgColorRanges: { h: [10, 40], s: [40, 70], l: [12, 22] },
     shapePool: [
       { type: 'lines', weight: 0.5 },
       { type: 'triangles', weight: 0.35 },
@@ -91,7 +95,8 @@ const moodToParams: Record<string, MoodParams> = {
     chaosLevel: [6, 9],
   },
   mysterious: {
-    colorRanges: { h: [260, 310], s: [40, 80], l: [30, 55] },
+    colorRanges: { h: [260, 310], s: [50, 80], l: [45, 65] },
+    bgColorRanges: { h: [270, 320], s: [30, 60], l: [8, 18] },
     shapePool: [
       { type: 'circles', weight: 0.4 },
       { type: 'waves', weight: 0.3 },
@@ -102,7 +107,8 @@ const moodToParams: Record<string, MoodParams> = {
     chaosLevel: [3, 5],
   },
   peaceful: {
-    colorRanges: { h: [90, 150], s: [25, 55], l: [55, 80] },
+    colorRanges: { h: [90, 150], s: [35, 60], l: [55, 75] },
+    bgColorRanges: { h: [100, 160], s: [20, 45], l: [12, 22] },
     shapePool: [
       { type: 'waves', weight: 0.45 },
       { type: 'circles', weight: 0.35 },
@@ -113,7 +119,8 @@ const moodToParams: Record<string, MoodParams> = {
     chaosLevel: [1, 3],
   },
   intense: {
-    colorRanges: { h: [280, 340], s: [60, 90], l: [35, 60] },
+    colorRanges: { h: [280, 340], s: [60, 90], l: [45, 65] },
+    bgColorRanges: { h: [290, 340], s: [40, 70], l: [8, 18] },
     shapePool: [
       { type: 'triangles', weight: 0.5 },
       { type: 'lines', weight: 0.3 },
@@ -124,7 +131,8 @@ const moodToParams: Record<string, MoodParams> = {
     chaosLevel: [8, 10],
   },
   neutral: {
-    colorRanges: { h: [200, 280], s: [40, 70], l: [50, 75] },
+    colorRanges: { h: [200, 280], s: [40, 70], l: [50, 70] },
+    bgColorRanges: { h: [220, 280], s: [25, 50], l: [10, 20] },
     shapePool: [
       { type: 'spirals', weight: 0.35 },
       { type: 'circles', weight: 0.35 },
@@ -219,39 +227,63 @@ function generateColorPalette(
   mood: string,
   keyword: string,
   seed: number
-): string[] {
+): { shapeColors: string[]; backgroundColors: string[] } {
   const moodData = moodToParams[mood] || moodToParams.neutral;
   const ranges = moodData.colorRanges;
+  const bgRanges = moodData.bgColorRanges;
   
   const baseSeed = hashKeyword(keyword).reduce((a, b) => a + b, 0) + seed;
   
+  // Generate shape colors (bright)
   const baseH = seededRandom(baseSeed) * (ranges.h[1] - ranges.h[0]) + ranges.h[0];
   const baseS = seededRandom(baseSeed + 1) * (ranges.s[1] - ranges.s[0]) + ranges.s[0];
   const baseL = seededRandom(baseSeed + 2) * (ranges.l[1] - ranges.l[0]) + ranges.l[0];
   
-  const colors: string[] = [];
+  const shapeColors: string[] = [];
   
-  colors.push(hslToHex(baseH, baseS, baseL));
+  shapeColors.push(hslToHex(baseH, baseS, baseL));
   
   const analogousOffset = 20 + seededRandom(baseSeed + 3) * 20;
-  colors.push(hslToHex(baseH + analogousOffset, baseS, baseL));
-  colors.push(hslToHex(baseH - analogousOffset, baseS, baseL));
+  shapeColors.push(hslToHex(baseH + analogousOffset, baseS, baseL));
+  shapeColors.push(hslToHex(baseH - analogousOffset, baseS, baseL));
   
   const complementaryHue = (baseH + 180) % 360;
   const compVariation = seededRandom(baseSeed + 4) * 20 - 10;
-  colors.push(hslToHex(complementaryHue + compVariation, baseS * 0.8, baseL + 5));
+  shapeColors.push(hslToHex(complementaryHue + compVariation, baseS * 0.8, baseL + 5));
   
   if (seededRandom(baseSeed + 5) > 0.4) {
     const tintedL = Math.min(90, baseL + 25);
-    colors.push(hslToHex(baseH + seededRandom(baseSeed + 6) * 15 - 7.5, baseS * 0.5, tintedL));
+    shapeColors.push(hslToHex(baseH + seededRandom(baseSeed + 6) * 15 - 7.5, baseS * 0.5, tintedL));
   }
   
   if (seededRandom(baseSeed + 7) > 0.5) {
     const shadedL = Math.max(15, baseL - 15);
-    colors.push(hslToHex(baseH + seededRandom(baseSeed + 8) * 10 - 5, baseS * 1.1, shadedL));
+    shapeColors.push(hslToHex(baseH + seededRandom(baseSeed + 8) * 10 - 5, baseS * 1.1, shadedL));
   }
   
-  return colors.slice(0, 6);
+  // Generate background colors (dark)
+  const bgBaseSeed = baseSeed + 1000;
+  const bgH = seededRandom(bgBaseSeed) * (bgRanges.h[1] - bgRanges.h[0]) + bgRanges.h[0];
+  const bgS = seededRandom(bgBaseSeed + 1) * (bgRanges.s[1] - bgRanges.s[0]) + bgRanges.s[0];
+  const bgL = seededRandom(bgBaseSeed + 2) * (bgRanges.l[1] - bgRanges.l[0]) + bgRanges.l[0];
+  
+  const backgroundColors: string[] = [];
+  
+  // Dark base color
+  backgroundColors.push(hslToHex(bgH, bgS, bgL));
+  
+  // Slightly lighter/darker variations
+  const bgOffset = seededRandom(bgBaseSeed + 3) * 8 - 4;
+  backgroundColors.push(hslToHex(bgH + seededRandom(bgBaseSeed + 4) * 20 - 10, bgS * 0.8, bgL + bgOffset));
+  
+  // Complementary dark accent
+  const bgCompHue = (bgH + 180) % 360;
+  backgroundColors.push(hslToHex(bgCompHue, bgS * 0.5, bgL - 5));
+  
+  return {
+    shapeColors: shapeColors.slice(0, 6),
+    backgroundColors: backgroundColors.slice(0, 3),
+  };
 }
 
 function selectShapeTypes(
@@ -281,7 +313,7 @@ function selectShapeTypes(
   return selected;
 }
 
-export function generateArtParams(mood: string, keyword?: string, algorithm: ArtAlgorithm = 'mixed'): ArtParams {
+export function generateArtParams(mood: string, keyword?: string): ArtParams {
   const seed = Math.floor(Math.random() * 1000000);
   const normalizedMood = mood.toLowerCase();
   const moodData = moodToParams[normalizedMood] || moodToParams.neutral;
@@ -295,19 +327,19 @@ export function generateArtParams(mood: string, keyword?: string, algorithm: Art
     shapeMixCount: 1,
   };
   
-  const shapeCount = algorithm === 'single' ? 1 : kwProps.shapeMixCount;
+  const shapeCount = kwProps.shapeMixCount;
   const shapeTypes = selectShapeTypes(moodData.shapePool, shapeCount);
   
-  const colors = generateColorPalette(normalizedMood, keyword || '', seed);
+  const { shapeColors, backgroundColors } = generateColorPalette(normalizedMood, keyword || '', seed);
   
   const hashSeed = keyword ? hashKeyword(keyword).reduce((a, b) => a + b, 0) : seed;
   
   return {
     seed,
     mood: normalizedMood,
-    colors,
+    colors: shapeColors,
+    backgroundColors,
     shapeTypes,
-    algorithm,
     complexity: randomInRange(hashSeed + 100, moodData.complexity[0], moodData.complexity[1]),
     motionSpeed: randomInRange(hashSeed + 200, moodData.motionSpeed[0], moodData.motionSpeed[1]),
     chaosLevel: randomInRange(hashSeed + 300, moodData.chaosLevel[0], moodData.chaosLevel[1]),

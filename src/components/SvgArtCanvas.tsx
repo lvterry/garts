@@ -4,6 +4,7 @@ export interface ArtParams {
   seed: number;
   mood: string;
   colors: string[];
+  backgroundColors: string[];
   shapeTypes: string[];
   complexity: number;
   motionSpeed: number;
@@ -281,9 +282,9 @@ function getBackgroundColor(colors: string[]): string {
 export default function SvgArtCanvas({ params }: SvgArtCanvasProps) {
   const width = DEFAULT_SIZE;
   const height = DEFAULT_SIZE;
-  const { colors, shapeTypes, layerCount } = params;
+  const { colors, backgroundColors, shapeTypes, layerCount } = params;
   
-  const backgroundColor = getBackgroundColor(colors);
+  const bgColor = backgroundColors?.[0] || '#0a0a12';
   
   const shapeLayerOrder = ['waves', 'circles', 'spirals', 'triangles', 'lines'];
   const sortedShapes = [...shapeTypes].sort((a, b) => 
@@ -317,10 +318,10 @@ export default function SvgArtCanvas({ params }: SvgArtCanvasProps) {
       viewBox={`0 0 ${width} ${height}`}
       style={{
         display: 'block',
-        backgroundColor: backgroundColor,
+        backgroundColor: bgColor,
       }}
     >
-      <rect x="0" y="0" width={width} height={height} fill={backgroundColor} opacity={0.9} />
+      <rect x="0" y="0" width={width} height={height} fill={bgColor} opacity={0.9} />
       
       {renderAllLayers()}
     </svg>

@@ -21,11 +21,8 @@ const SvgArtCanvas = dynamic(() => import('@/components/SvgArtCanvas'), {
 interface PreviewData {
   keyword: string;
   mood: string;
-  mixed: ArtParams;
-  single: ArtParams;
+  artParams: ArtParams;
 }
-
-type ArtAlgorithm = 'mixed' | 'single';
 
 interface ArtworkData {
   id: string;
@@ -49,16 +46,14 @@ async function generateArt(keyword: string): Promise<PreviewData> {
   return response.json();
 }
 
-async function saveArt(data: PreviewData, algorithm: ArtAlgorithm) {
-  const artData = algorithm === 'mixed' ? data.mixed : data.single;
-  
+async function saveArt(data: PreviewData) {
   const response = await fetch('/api/art/save', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       keyword: data.keyword,
       mood: data.mood,
-      artData,
+      artData: data.artParams,
       format: 'svg',
     }),
   });
@@ -76,7 +71,6 @@ export default function Home() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState<PreviewData | null>(null);
-  const [selectedAlgorithm, setSelectedAlgorithm] = useState<ArtAlgorithm>('mixed');
   const [savedId, setSavedId] = useState<string | null>(null);
   const [artworks, setArtworks] = useState<ArtworkData[]>([]);
   const [galleryLoading, setGalleryLoading] = useState(true);
@@ -110,7 +104,6 @@ export default function Home() {
       const art = await generateArt(keyword.trim());
       setPreview(art);
       setKeyword('');
-      setSelectedAlgorithm('mixed');
     } catch (err) {
       setError('Failed to generate art. Please try again.');
     } finally {
@@ -123,7 +116,7 @@ export default function Home() {
 
     setSaving(true);
     try {
-      const result = await saveArt(preview, selectedAlgorithm);
+      const result = await saveArt(preview);
       setSavedId(result.id);
       setSavedId(result.id);
       const response = await fetch('/api/art?limit=6');
@@ -185,18 +178,9 @@ export default function Home() {
               <div className="text-center mb-4">
                 <p className="text-muted-foreground">Generating...</p>
               </div>
-              <div className="grid md:grid-cols-2 gap-4 mb-6">
+              <div className="flex justify-center mb-6">
                 <div className="animate-pulse">
-                  <div className="aspect-square bg-secondary rounded-xl" />
-                  <div className="p-2 text-center bg-secondary/50 text-sm">
-                    <span className="font-medium text-muted-foreground">Mixed</span>
-                  </div>
-                </div>
-                <div className="animate-pulse">
-                  <div className="aspect-square bg-secondary rounded-xl" />
-                  <div className="p-2 text-center bg-secondary/50 text-sm">
-                    <span className="font-medium text-muted-foreground">Single</span>
-                  </div>
+                  <div className="aspect-square bg-secondary rounded-xl w-80" />
                 </div>
               </div>
             </>
@@ -210,40 +194,12 @@ export default function Home() {
                 </p>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4 mb-6">
-                <div 
-                  className={`cursor-pointer rounded-xl overflow-hidden border-2 transition-all ${
-                    selectedAlgorithm === 'mixed' 
-                      ? 'border-primary ring-2 ring-primary/50' 
-                      : 'border-transparent hover:border-muted'
-                  }`}
-                  onClick={() => setSelectedAlgorithm('mixed')}
-                >
-                  <div className="aspect-square bg-secondary">
+              <div className="flex justify-center mb-6">
+                <div className="rounded-xl overflow-hidden border-2 border-primary ring-2 ring-primary/50">
+                  <div className="aspect-square w-80">
                     <SvgArtCanvas 
-                      params={preview.mixed} 
+                      params={preview.artParams} 
                     />
-                  </div>
-                  <div className="p-2 text-center bg-secondary/50 text-sm">
-                    <span className="font-medium">Mixed</span>
-                  </div>
-                </div>
-
-                <div 
-                  className={`cursor-pointer rounded-xl overflow-hidden border-2 transition-all ${
-                    selectedAlgorithm === 'single' 
-                      ? 'border-primary ring-2 ring-primary/50' 
-                      : 'border-transparent hover:border-muted'
-                  }`}
-                  onClick={() => setSelectedAlgorithm('single')}
-                >
-                  <div className="aspect-square bg-secondary">
-                    <SvgArtCanvas 
-                      params={preview.single} 
-                    />
-                  </div>
-                  <div className="p-2 text-center bg-secondary/50 text-sm">
-                    <span className="font-medium">Single</span>
                   </div>
                 </div>
               </div>
