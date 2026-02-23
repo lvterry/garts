@@ -37,7 +37,7 @@ interface MoodParams {
 
 const moodToParams: Record<string, MoodParams> = {
   serene: {
-    colorRanges: { h: [180, 220], s: [30, 60], l: [65, 85] },
+    colorRanges: { h: [180, 220], s: [30, 60], l: [75, 95] },
     shapePool: [
       { type: 'circles', weight: 0.5 },
       { type: 'waves', weight: 0.3 },
@@ -48,7 +48,7 @@ const moodToParams: Record<string, MoodParams> = {
     chaosLevel: [1, 3],
   },
   chaotic: {
-    colorRanges: { h: [0, 60], s: [70, 100], l: [50, 70] },
+    colorRanges: { h: [0, 60], s: [70, 100], l: [60, 80] },
     shapePool: [
       { type: 'triangles', weight: 0.6 },
       { type: 'lines', weight: 0.4 },
@@ -58,7 +58,7 @@ const moodToParams: Record<string, MoodParams> = {
     chaosLevel: [7, 10],
   },
   joyful: {
-    colorRanges: { h: [30, 90], s: [60, 90], l: [55, 75] },
+    colorRanges: { h: [30, 90], s: [60, 90], l: [65, 85] },
     shapePool: [
       { type: 'spirals', weight: 0.4 },
       { type: 'circles', weight: 0.35 },
@@ -69,7 +69,7 @@ const moodToParams: Record<string, MoodParams> = {
     chaosLevel: [4, 6],
   },
   melancholic: {
-    colorRanges: { h: [200, 240], s: [10, 30], l: [20, 45] },
+    colorRanges: { h: [200, 240], s: [10, 30], l: [30, 55] },
     shapePool: [
       { type: 'waves', weight: 0.5 },
       { type: 'circles', weight: 0.3 },
@@ -80,7 +80,7 @@ const moodToParams: Record<string, MoodParams> = {
     chaosLevel: [2, 4],
   },
   energetic: {
-    colorRanges: { h: [10, 50], s: [80, 100], l: [50, 70] },
+    colorRanges: { h: [10, 50], s: [80, 100], l: [60, 80] },
     shapePool: [
       { type: 'lines', weight: 0.5 },
       { type: 'triangles', weight: 0.35 },
@@ -91,7 +91,7 @@ const moodToParams: Record<string, MoodParams> = {
     chaosLevel: [6, 9],
   },
   mysterious: {
-    colorRanges: { h: [260, 310], s: [40, 80], l: [20, 45] },
+    colorRanges: { h: [260, 310], s: [40, 80], l: [30, 55] },
     shapePool: [
       { type: 'circles', weight: 0.4 },
       { type: 'waves', weight: 0.3 },
@@ -102,7 +102,7 @@ const moodToParams: Record<string, MoodParams> = {
     chaosLevel: [3, 5],
   },
   peaceful: {
-    colorRanges: { h: [90, 150], s: [25, 55], l: [45, 70] },
+    colorRanges: { h: [90, 150], s: [25, 55], l: [55, 80] },
     shapePool: [
       { type: 'waves', weight: 0.45 },
       { type: 'circles', weight: 0.35 },
@@ -113,7 +113,7 @@ const moodToParams: Record<string, MoodParams> = {
     chaosLevel: [1, 3],
   },
   intense: {
-    colorRanges: { h: [280, 340], s: [60, 90], l: [25, 50] },
+    colorRanges: { h: [280, 340], s: [60, 90], l: [35, 60] },
     shapePool: [
       { type: 'triangles', weight: 0.5 },
       { type: 'lines', weight: 0.3 },
@@ -124,7 +124,7 @@ const moodToParams: Record<string, MoodParams> = {
     chaosLevel: [8, 10],
   },
   neutral: {
-    colorRanges: { h: [200, 280], s: [40, 70], l: [40, 65] },
+    colorRanges: { h: [200, 280], s: [40, 70], l: [50, 75] },
     shapePool: [
       { type: 'spirals', weight: 0.35 },
       { type: 'circles', weight: 0.35 },
@@ -242,7 +242,7 @@ function generateColorPalette(
   colors.push(hslToHex(complementaryHue + compVariation, baseS * 0.8, baseL + 5));
   
   if (seededRandom(baseSeed + 5) > 0.4) {
-    const tintedL = Math.min(90, baseL + 20);
+    const tintedL = Math.min(90, baseL + 25);
     colors.push(hslToHex(baseH + seededRandom(baseSeed + 6) * 15 - 7.5, baseS * 0.5, tintedL));
   }
   
