@@ -317,7 +317,6 @@ export default function SvgArtCanvas({ params }: SvgArtCanvasProps) {
       viewBox={`0 0 ${width} ${height}`}
       style={{
         display: 'block',
-        borderRadius: 12,
         backgroundColor: backgroundColor,
       }}
     >
