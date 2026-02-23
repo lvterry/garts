@@ -2,110 +2,189 @@ export interface ArtParams {
   seed: number;
   mood: string;
   colors: string[];
-  shapeType: 'circles' | 'triangles' | 'lines' | 'spirals' | 'waves';
+  shapeTypes: string[];
   complexity: number;
   motionSpeed: number;
   chaosLevel: number;
+  rotationVariance: number;
+  sizeCurve: number;
+  positionBias: 'center' | 'edge' | 'uniform';
+  strokeWidth: number;
+  layerCount: number;
 }
 
-const moodToParams: Record<string, Omit<ArtParams, 'seed' | 'mood'>> = {
+interface ColorRanges {
+  h: [number, number];
+  s: [number, number];
+  l: [number, number];
+}
+
+interface ShapePoolItem {
+  type: string;
+  weight: number;
+}
+
+interface MoodParams {
+  colorRanges: ColorRanges;
+  shapePool: ShapePoolItem[];
+  complexity: [number, number];
+  motionSpeed: [number, number];
+  chaosLevel: [number, number];
+}
+
+const moodToParams: Record<string, MoodParams> = {
   serene: {
-    colors: ['#a8d8ea', '#aa96da', '#fcbad3', '#ffffd2'],
-    shapeType: 'circles',
-    complexity: 3,
-    motionSpeed: 2,
-    chaosLevel: 2,
+    colorRanges: { h: [180, 220], s: [30, 60], l: [65, 85] },
+    shapePool: [
+      { type: 'circles', weight: 0.5 },
+      { type: 'waves', weight: 0.3 },
+      { type: 'spirals', weight: 0.2 },
+    ],
+    complexity: [2, 4],
+    motionSpeed: [1, 3],
+    chaosLevel: [1, 3],
   },
   chaotic: {
-    colors: ['#ff6b6b', '#feca57', '#ff9ff3', '#54a0ff'],
-    shapeType: 'triangles',
-    complexity: 9,
-    motionSpeed: 9,
-    chaosLevel: 9,
+    colorRanges: { h: [0, 60], s: [70, 100], l: [50, 70] },
+    shapePool: [
+      { type: 'triangles', weight: 0.6 },
+      { type: 'lines', weight: 0.4 },
+    ],
+    complexity: [7, 10],
+    motionSpeed: [7, 10],
+    chaosLevel: [7, 10],
   },
   joyful: {
-    colors: ['#ffd93d', '#ff6b6b', '#6bcb77', '#4d96ff'],
-    shapeType: 'spirals',
-    complexity: 6,
-    motionSpeed: 7,
-    chaosLevel: 5,
+    colorRanges: { h: [30, 90], s: [60, 90], l: [55, 75] },
+    shapePool: [
+      { type: 'spirals', weight: 0.4 },
+      { type: 'circles', weight: 0.35 },
+      { type: 'triangles', weight: 0.25 },
+    ],
+    complexity: [5, 7],
+    motionSpeed: [5, 8],
+    chaosLevel: [4, 6],
   },
   melancholic: {
-    colors: ['#2c3e50', '#34495e', '#7f8c8d', '#95a5a6'],
-    shapeType: 'waves',
-    complexity: 4,
-    motionSpeed: 2,
-    chaosLevel: 3,
+    colorRanges: { h: [200, 240], s: [10, 30], l: [20, 45] },
+    shapePool: [
+      { type: 'waves', weight: 0.5 },
+      { type: 'circles', weight: 0.3 },
+      { type: 'lines', weight: 0.2 },
+    ],
+    complexity: [3, 5],
+    motionSpeed: [1, 3],
+    chaosLevel: [2, 4],
   },
   energetic: {
-    colors: ['#ff0844', '#ffb199', '#f6d365', '#fda085'],
-    shapeType: 'lines',
-    complexity: 8,
-    motionSpeed: 10,
-    chaosLevel: 8,
+    colorRanges: { h: [10, 50], s: [80, 100], l: [50, 70] },
+    shapePool: [
+      { type: 'lines', weight: 0.5 },
+      { type: 'triangles', weight: 0.35 },
+      { type: 'spirals', weight: 0.15 },
+    ],
+    complexity: [6, 9],
+    motionSpeed: [8, 10],
+    chaosLevel: [6, 9],
   },
   mysterious: {
-    colors: ['#0f0c29', '#302b63', '#24243e', '#4a148c'],
-    shapeType: 'circles',
-    complexity: 5,
-    motionSpeed: 3,
-    chaosLevel: 4,
+    colorRanges: { h: [260, 310], s: [40, 80], l: [20, 45] },
+    shapePool: [
+      { type: 'circles', weight: 0.4 },
+      { type: 'waves', weight: 0.3 },
+      { type: 'spirals', weight: 0.3 },
+    ],
+    complexity: [4, 6],
+    motionSpeed: [2, 4],
+    chaosLevel: [3, 5],
   },
   peaceful: {
-    colors: ['#56ab2f', '#a8e063', '#e8f5e9', '#b2dfdb'],
-    shapeType: 'waves',
-    complexity: 3,
-    motionSpeed: 2,
-    chaosLevel: 2,
+    colorRanges: { h: [90, 150], s: [25, 55], l: [45, 70] },
+    shapePool: [
+      { type: 'waves', weight: 0.45 },
+      { type: 'circles', weight: 0.35 },
+      { type: 'spirals', weight: 0.2 },
+    ],
+    complexity: [2, 4],
+    motionSpeed: [1, 3],
+    chaosLevel: [1, 3],
   },
   intense: {
-    colors: ['#cc2b5e', '#753a88', '#42275a', '#734b6d'],
-    shapeType: 'triangles',
-    complexity: 10,
-    motionSpeed: 8,
-    chaosLevel: 10,
+    colorRanges: { h: [280, 340], s: [60, 90], l: [25, 50] },
+    shapePool: [
+      { type: 'triangles', weight: 0.5 },
+      { type: 'lines', weight: 0.3 },
+      { type: 'circles', weight: 0.2 },
+    ],
+    complexity: [8, 10],
+    motionSpeed: [7, 10],
+    chaosLevel: [8, 10],
   },
   neutral: {
-    colors: ['#667eea', '#764ba2', '#f093fb', '#f5576c'],
-    shapeType: 'spirals',
-    complexity: 5,
-    motionSpeed: 5,
-    chaosLevel: 5,
+    colorRanges: { h: [200, 280], s: [40, 70], l: [40, 65] },
+    shapePool: [
+      { type: 'spirals', weight: 0.35 },
+      { type: 'circles', weight: 0.35 },
+      { type: 'waves', weight: 0.3 },
+    ],
+    complexity: [4, 6],
+    motionSpeed: [4, 6],
+    chaosLevel: [4, 6],
   },
 };
 
-function getKeywordModifier(keyword: string): number {
-  let hash = 0;
+function hashKeyword(keyword: string): number[] {
+  let hash1 = 0, hash2 = 0, hash3 = 0, hash4 = 0, hash5 = 0, hash6 = 0;
   for (let i = 0; i < keyword.length; i++) {
-    hash = ((hash << 5) - hash) + keyword.charCodeAt(i);
-    hash = hash & hash;
+    const char = keyword.charCodeAt(i);
+    hash1 = ((hash1 << 5) - hash1) + char;
+    hash2 = ((hash2 << 7) - hash2) + char * 2;
+    hash3 = ((hash3 << 3) - hash3) + char * 3;
+    hash4 = ((hash4 << 11) - hash4) + char * 4;
+    hash5 = ((hash5 << 9) - hash5) + char * 5;
+    hash6 = ((hash6 << 13) - hash6) + char * 6;
   }
-  return Math.abs(hash) % 7 - 3;
+  return [
+    Math.abs(hash1) % 1000,
+    Math.abs(hash2) % 1000,
+    Math.abs(hash3) % 1000,
+    Math.abs(hash4) % 1000,
+    Math.abs(hash5) % 1000,
+    Math.abs(hash6) % 1000,
+  ];
 }
 
-function hexToHsl(hex: string): { h: number; s: number; l: number } {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result) return { h: 0, s: 0, l: 50 };
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
+function randomInRange(seed: number, min: number, max: number): number {
+  return Math.floor(seededRandom(seed) * (max - min + 1)) + min;
+}
+
+interface KeywordProperties {
+  rotationVariance: number;
+  sizeCurve: number;
+  positionBias: 'center' | 'edge' | 'uniform';
+  strokeWidth: number;
+  layerCount: number;
+  shapeMixCount: number;
+}
+
+function getKeywordProperties(keyword: string): KeywordProperties {
+  const [h1, h2, h3, h4, h5, h6] = hashKeyword(keyword);
   
-  let r = parseInt(result[1], 16) / 255;
-  let g = parseInt(result[2], 16) / 255;
-  let b = parseInt(result[3], 16) / 255;
-
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h = 0, s = 0;
-  const l = (max + min) / 2;
-
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-      case g: h = ((b - r) / d + 2) / 6; break;
-      case b: h = ((r - g) / d + 4) / 6; break;
-    }
-  }
-
-  return { h: h * 360, s: s * 100, l: l * 100 };
+  const positionOptions: ('center' | 'edge' | 'uniform')[] = ['center', 'edge', 'uniform'];
+  
+  return {
+    rotationVariance: h1 % 360,
+    sizeCurve: h2 % 100 / 100,
+    positionBias: positionOptions[h3 % 3],
+    strokeWidth: 1 + (h4 % 6),
+    layerCount: 1 + (h5 % 3),
+    shapeMixCount: 1 + (h6 % 3),
+  };
 }
 
 function hslToHex(h: number, s: number, l: number): string {
@@ -133,35 +212,106 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-function deriveAccentColor(keyword: string, baseColors: string[]): string {
-  const modifier = getKeywordModifier(keyword);
-  const hueShift = modifier * 15;
-  const { h, s, l } = hexToHsl(baseColors[0]);
-  return hslToHex(h + hueShift, s, l);
+function generateColorPalette(
+  mood: string,
+  keyword: string,
+  seed: number
+): string[] {
+  const moodData = moodToParams[mood] || moodToParams.neutral;
+  const ranges = moodData.colorRanges;
+  
+  const baseSeed = hashKeyword(keyword).reduce((a, b) => a + b, 0) + seed;
+  
+  const baseH = seededRandom(baseSeed) * (ranges.h[1] - ranges.h[0]) + ranges.h[0];
+  const baseS = seededRandom(baseSeed + 1) * (ranges.s[1] - ranges.s[0]) + ranges.s[0];
+  const baseL = seededRandom(baseSeed + 2) * (ranges.l[1] - ranges.l[0]) + ranges.l[0];
+  
+  const colors: string[] = [];
+  
+  colors.push(hslToHex(baseH, baseS, baseL));
+  
+  const analogousOffset = 20 + seededRandom(baseSeed + 3) * 20;
+  colors.push(hslToHex(baseH + analogousOffset, baseS, baseL));
+  colors.push(hslToHex(baseH - analogousOffset, baseS, baseL));
+  
+  const complementaryHue = (baseH + 180) % 360;
+  const compVariation = seededRandom(baseSeed + 4) * 20 - 10;
+  colors.push(hslToHex(complementaryHue + compVariation, baseS * 0.8, baseL + 5));
+  
+  if (seededRandom(baseSeed + 5) > 0.4) {
+    const tintedL = Math.min(90, baseL + 20);
+    colors.push(hslToHex(baseH + seededRandom(baseSeed + 6) * 15 - 7.5, baseS * 0.5, tintedL));
+  }
+  
+  if (seededRandom(baseSeed + 7) > 0.5) {
+    const shadedL = Math.max(15, baseL - 15);
+    colors.push(hslToHex(baseH + seededRandom(baseSeed + 8) * 10 - 5, baseS * 1.1, shadedL));
+  }
+  
+  return colors.slice(0, 6);
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
+function selectShapeTypes(
+  shapePool: ShapePoolItem[],
+  count: number
+): string[] {
+  const totalWeight = shapePool.reduce((sum, item) => sum + item.weight, 0);
+  const selected: string[] = [];
+  const available = [...shapePool];
+  
+  for (let i = 0; i < count && available.length > 0; i++) {
+    let random = Math.random() * totalWeight;
+    let selectedIndex = 0;
+    
+    for (let j = 0; j < available.length; j++) {
+      random -= available[j].weight;
+      if (random <= 0) {
+        selectedIndex = j;
+        break;
+      }
+    }
+    
+    selected.push(available[selectedIndex].type);
+    available.splice(selectedIndex, 1);
+  }
+  
+  return selected;
 }
 
 export function generateArtParams(mood: string, keyword?: string): ArtParams {
+  const seed = Math.floor(Math.random() * 1000000);
   const normalizedMood = mood.toLowerCase();
-  const baseParams = moodToParams[normalizedMood] || moodToParams.neutral;
+  const moodData = moodToParams[normalizedMood] || moodToParams.neutral;
   
-  const modifier = keyword ? getKeywordModifier(keyword) : 0;
+  const kwProps = keyword ? getKeywordProperties(keyword) : {
+    rotationVariance: 45,
+    sizeCurve: 0.5,
+    positionBias: 'uniform' as const,
+    strokeWidth: 2,
+    layerCount: 1,
+    shapeMixCount: 1,
+  };
   
-  const colors = keyword 
-    ? [...baseParams.colors, deriveAccentColor(keyword, baseParams.colors)]
-    : baseParams.colors;
-
+  const shapeCount = kwProps.shapeMixCount;
+  const shapeTypes = selectShapeTypes(moodData.shapePool, shapeCount);
+  
+  const colors = generateColorPalette(normalizedMood, keyword || '', seed);
+  
+  const hashSeed = keyword ? hashKeyword(keyword).reduce((a, b) => a + b, 0) : seed;
+  
   return {
-    seed: Math.floor(Math.random() * 1000000),
+    seed,
     mood: normalizedMood,
     colors,
-    shapeType: baseParams.shapeType,
-    complexity: clamp(baseParams.complexity + modifier, 1, 10),
-    motionSpeed: clamp(baseParams.motionSpeed + modifier, 1, 10),
-    chaosLevel: clamp(baseParams.chaosLevel + modifier, 1, 10),
+    shapeTypes,
+    complexity: randomInRange(hashSeed + 100, moodData.complexity[0], moodData.complexity[1]),
+    motionSpeed: randomInRange(hashSeed + 200, moodData.motionSpeed[0], moodData.motionSpeed[1]),
+    chaosLevel: randomInRange(hashSeed + 300, moodData.chaosLevel[0], moodData.chaosLevel[1]),
+    rotationVariance: kwProps.rotationVariance,
+    sizeCurve: kwProps.sizeCurve,
+    positionBias: kwProps.positionBias,
+    strokeWidth: kwProps.strokeWidth,
+    layerCount: kwProps.layerCount,
   };
 }
 

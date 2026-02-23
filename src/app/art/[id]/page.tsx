@@ -118,7 +118,7 @@ export default function ArtDetailPage() {
             </div>
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Style</p>
-              <p className="font-medium text-muted-foreground capitalize">{artwork.artData.shapeType}</p>
+              <p className="font-medium text-muted-foreground capitalize">{artwork.artData.shapeTypes.join(', ')}</p>
             </div>
 
             <Button

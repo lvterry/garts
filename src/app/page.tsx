@@ -177,65 +177,89 @@ export default function Home() {
         <p className="text-center text-destructive mb-6">{error}</p>
       )}
 
-      {preview && (
+      {(loading || preview) && (
         <section className="max-w-4xl mx-auto mb-12">
-          <div className="text-center mb-4">
-            <p className="text-muted-foreground">
-              <span className="font-semibold text-foreground">{preview.keyword}</span>
-              {' → '}
-              <span className="capitalize">{preview.mood}</span>
-            </p>
-          </div>
+          {loading ? (
+            <>
+              <div className="text-center mb-4">
+                <p className="text-muted-foreground">Generating...</p>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4 mb-6">
+                <div className="animate-pulse">
+                  <div className="aspect-square bg-secondary rounded-xl" />
+                  <div className="p-2 text-center bg-secondary/50 text-sm">
+                    <span className="font-medium text-muted-foreground">Variant A</span>
+                  </div>
+                </div>
+                <div className="animate-pulse">
+                  <div className="aspect-square bg-secondary rounded-xl" />
+                  <div className="p-2 text-center bg-secondary/50 text-sm">
+                    <span className="font-medium text-muted-foreground">Variant B</span>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : preview && (
+            <>
+              <div className="text-center mb-4">
+                <p className="text-muted-foreground">
+                  <span className="font-semibold text-foreground">{preview.keyword}</span>
+                  {' → '}
+                  <span className="capitalize">{preview.mood}</span>
+                </p>
+              </div>
 
-          <div className="grid md:grid-cols-2 gap-4 mb-6">
-            <div 
-              className={`cursor-pointer rounded-xl overflow-hidden border-2 transition-all ${
-                selectedVariant === 1 
-                  ? 'border-primary ring-2 ring-primary/50' 
-                  : 'border-transparent hover:border-muted'
-              }`}
-              onClick={() => setSelectedVariant(1)}
-            >
-              <div className="aspect-square bg-secondary">
-                <SvgArtCanvas 
-                  params={{ ...preview.artData, seed: preview.artData.seed }} 
-                />
-              </div>
-              <div className="p-2 text-center bg-secondary/50 text-sm">
-                <span className="font-medium">Variant A</span>
-              </div>
-            </div>
+              <div className="grid md:grid-cols-2 gap-4 mb-6">
+                <div 
+                  className={`cursor-pointer rounded-xl overflow-hidden border-2 transition-all ${
+                    selectedVariant === 1 
+                      ? 'border-primary ring-2 ring-primary/50' 
+                      : 'border-transparent hover:border-muted'
+                  }`}
+                  onClick={() => setSelectedVariant(1)}
+                >
+                  <div className="aspect-square bg-secondary">
+                    <SvgArtCanvas 
+                      params={{ ...preview.artData, seed: preview.artData.seed }} 
+                    />
+                  </div>
+                  <div className="p-2 text-center bg-secondary/50 text-sm">
+                    <span className="font-medium">Variant A</span>
+                  </div>
+                </div>
 
-            <div 
-              className={`cursor-pointer rounded-xl overflow-hidden border-2 transition-all ${
-                selectedVariant === 2 
-                  ? 'border-primary ring-2 ring-primary/50' 
-                  : 'border-transparent hover:border-muted'
-              }`}
-              onClick={() => setSelectedVariant(2)}
-            >
-              <div className="aspect-square bg-secondary">
-                <SvgArtCanvas 
-                  params={{ ...preview.artData, seed: preview.artData.seed + 1 }} 
-                />
+                <div 
+                  className={`cursor-pointer rounded-xl overflow-hidden border-2 transition-all ${
+                    selectedVariant === 2 
+                      ? 'border-primary ring-2 ring-primary/50' 
+                      : 'border-transparent hover:border-muted'
+                  }`}
+                  onClick={() => setSelectedVariant(2)}
+                >
+                  <div className="aspect-square bg-secondary">
+                    <SvgArtCanvas 
+                      params={{ ...preview.artData, seed: preview.artData.seed + 1 }} 
+                    />
+                  </div>
+                  <div className="p-2 text-center bg-secondary/50 text-sm">
+                    <span className="font-medium">Variant B</span>
+                  </div>
+                </div>
               </div>
-              <div className="p-2 text-center bg-secondary/50 text-sm">
-                <span className="font-medium">Variant B</span>
-              </div>
-            </div>
-          </div>
 
-          <div className="text-center">
-            {savedId ? (
-              <Button asChild size="sm">
-                <Link href={`/art/${savedId}`}>View in Gallery</Link>
-              </Button>
-            ) : (
-              <Button onClick={handleSave} disabled={saving} size="sm">
-                {saving ? 'Saving...' : 'Save to Gallery'}
-              </Button>
-            )}
-          </div>
+              <div className="text-center">
+                {savedId ? (
+                  <Button asChild size="sm">
+                    <Link href={`/art/${savedId}`}>View in Gallery</Link>
+                  </Button>
+                ) : (
+                  <Button onClick={handleSave} disabled={saving} size="sm">
+                    {saving ? 'Saving...' : 'Save to Gallery'}
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
         </section>
       )}
 
