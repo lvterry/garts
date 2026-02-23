@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     const analyzer = createMoodAnalyzer();
     const moodResult = await analyzer.extractMood(trimmedKeyword);
 
-    const artParams = generateArtParams(moodResult.mood);
+    const artParams = generateArtParams(moodResult.mood, trimmedKeyword);
     const artData = artParamsToJSON(artParams);
 
     return NextResponse.json({
