@@ -98,7 +98,7 @@ export default function ArtDetailPage() {
               </div>
             }
           >
-            <SvgArtCanvas params={artwork.artData} width={500} height={500} />
+            <SvgArtCanvas params={artwork.artData} />
           </ErrorBoundary>
         </div>
 

@@ -12,9 +12,9 @@ export interface ArtParams {
 
 interface SvgArtCanvasProps {
   params: ArtParams;
-  width?: number;
-  height?: number;
 }
+
+const DEFAULT_SIZE = 500;
 
 function seededRandom(seed: number, min: number, max: number): number {
   const x = Math.sin(seed) * 10000;
@@ -36,7 +36,9 @@ function hexToRgb(hex: string): string {
   return `rgb(${r},${g},${b})`;
 }
 
-export default function SvgArtCanvas({ params, width = 500, height = 500 }: SvgArtCanvasProps) {
+export default function SvgArtCanvas({ params }: SvgArtCanvasProps) {
+  const width = DEFAULT_SIZE;
+  const height = DEFAULT_SIZE;
   const { seed, colors, shapeType, complexity, chaosLevel } = params;
   
   const numShapes = complexity * 8;
@@ -175,10 +177,11 @@ export default function SvgArtCanvas({ params, width = 500, height = 500 }: SvgA
 
   return (
     <svg
-      width={width}
-      height={height}
+      width="100%"
+      height="100%"
       viewBox={`0 0 ${width} ${height}`}
       style={{
+        display: 'block',
         borderRadius: 12,
         backgroundColor: '#18181b',
       }}

@@ -82,7 +82,7 @@ export default function GalleryPage() {
                 <Card className="overflow-hidden hover:-translate-y-1 transition-transform">
                   <CardContent className="p-0">
                     <div className="aspect-square bg-secondary">
-                      <SvgArtCanvas params={artwork.artData} width={400} height={400} />
+                      <SvgArtCanvas params={artwork.artData} />
                     </div>
                     <div className="px-4 py-3 flex justify-between items-center">
                       <span className="font-medium">{artwork.keyword}</span>

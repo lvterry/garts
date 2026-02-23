@@ -199,8 +199,6 @@ export default function Home() {
               <div className="aspect-square bg-secondary">
                 <SvgArtCanvas 
                   params={{ ...preview.artData, seed: preview.artData.seed }} 
-                  width={320} 
-                  height={320} 
                 />
               </div>
               <div className="p-2 text-center bg-secondary/50 text-sm">
@@ -219,8 +217,6 @@ export default function Home() {
               <div className="aspect-square bg-secondary">
                 <SvgArtCanvas 
                   params={{ ...preview.artData, seed: preview.artData.seed + 1 }} 
-                  width={320} 
-                  height={320} 
                 />
               </div>
               <div className="p-2 text-center bg-secondary/50 text-sm">
@@ -265,7 +261,7 @@ export default function Home() {
                   <Card className="overflow-hidden hover:-translate-y-1 transition-transform">
                     <CardContent className="p-0">
                       <div className="aspect-square bg-secondary">
-                        <SvgArtCanvas params={artwork.artData} width={200} height={200} />
+                        <SvgArtCanvas params={artwork.artData} />
                       </div>
                     </CardContent>
                   </Card>
