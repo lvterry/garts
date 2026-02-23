@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { Trash2 } from 'lucide-react';
 import { ArtParams } from '@/components/SvgArtCanvas';
 
 const SvgArtCanvas = dynamic(() => import('@/components/SvgArtCanvas'), {
@@ -20,6 +22,14 @@ interface PreviewData {
   keyword: string;
   mood: string;
   artData: ArtParams;
+}
+
+interface ArtworkData {
+  id: string;
+  keyword: string;
+  mood: string;
+  artData: ArtParams;
+  createdAt: string;
 }
 
 async function generateArt(keyword: string): Promise<PreviewData> {
@@ -66,6 +76,24 @@ export default function Home() {
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<1 | 2>(1);
   const [savedId, setSavedId] = useState<string | null>(null);
+  const [artworks, setArtworks] = useState<ArtworkData[]>([]);
+  const [galleryLoading, setGalleryLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchArtworks() {
+      try {
+        const response = await fetch('/api/art?limit=6');
+        if (!response.ok) throw new Error('Failed to fetch');
+        const data = await response.json();
+        setArtworks(data.artworks);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setGalleryLoading(false);
+      }
+    }
+    fetchArtworks();
+  }, []);
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,6 +125,9 @@ export default function Home() {
     try {
       const result = await saveArt({ ...preview, seed: selectedSeed });
       setSavedId(result.id);
+      const response = await fetch('/api/art?limit=6');
+      const data = await response.json();
+      setArtworks(data.artworks);
     } catch (err) {
       setError('Failed to save art. Please try again.');
     } finally {
@@ -104,39 +135,51 @@ export default function Home() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this artwork?')) return;
+
+    try {
+      await fetch(`/api/art/${id}`, { method: 'DELETE' });
+      setArtworks(artworks.filter((a) => a.id !== id));
+    } catch (err) {
+      alert('Failed to delete artwork');
+    }
+  };
+
   return (
     <div>
-      <section className="text-center max-w-2xl mx-auto mb-16">
-        <h1 className="text-5xl font-semibold tracking-tight mb-5 bg-gradient-to-b from-white to-gray-500 bg-clip-text text-transparent">
+      <section className="text-center max-w-2xl mx-auto mb-10">
+        <h1 className="text-4xl font-semibold tracking-tight mb-3 text-white">
           Generative Art from Your Mood
         </h1>
-        <p className="text-lg text-gray-400">
+        <p className="text-gray-400">
           Enter a keyword and let AI extract the mood to generate unique art
         </p>
       </section>
 
-      <section className="flex justify-center mb-16">
-        <form onSubmit={handleGenerate} className="flex gap-3 w-full max-w-md">
+      <section className="flex justify-center mb-12">
+        <form onSubmit={handleGenerate} className="flex gap-2 w-full max-w-sm">
           <Input
             type="text"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="Enter a keyword..."
             disabled={loading}
+            className="h-9"
           />
-          <Button type="submit" disabled={loading || !keyword.trim()}>
-            {loading ? 'Generating...' : 'Generate'}
+          <Button type="submit" disabled={loading || !keyword.trim()} size="sm">
+            {loading ? '...' : 'Generate'}
           </Button>
         </form>
       </section>
 
       {error && (
-        <p className="text-center text-destructive mb-8">{error}</p>
+        <p className="text-center text-destructive mb-6">{error}</p>
       )}
 
       {preview && (
-        <section className="max-w-4xl mx-auto">
-          <div className="text-center mb-6">
+        <section className="max-w-4xl mx-auto mb-12">
+          <div className="text-center mb-4">
             <p className="text-muted-foreground">
               <span className="font-semibold text-foreground">{preview.keyword}</span>
               {' → '}
@@ -144,7 +187,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8 mb-8">
+          <div className="grid md:grid-cols-2 gap-4 mb-6">
             <div 
               className={`cursor-pointer rounded-xl overflow-hidden border-2 transition-all ${
                 selectedVariant === 1 
@@ -156,17 +199,12 @@ export default function Home() {
               <div className="aspect-square bg-secondary rounded-xl overflow-hidden">
                 <SvgArtCanvas 
                   params={{ ...preview.artData, seed: preview.artData.seed }} 
-                  width={400} 
-                  height={400} 
+                  width={320} 
+                  height={320} 
                 />
               </div>
-              <div className="p-3 text-center bg-secondary/50">
+              <div className="p-2 text-center bg-secondary/50 text-sm">
                 <span className="font-medium">Variant A</span>
-                {selectedVariant === 1 && (
-                  <span className="ml-2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded">
-                    Selected
-                  </span>
-                )}
               </div>
             </div>
 
@@ -181,34 +219,74 @@ export default function Home() {
               <div className="aspect-square bg-secondary rounded-xl overflow-hidden">
                 <SvgArtCanvas 
                   params={{ ...preview.artData, seed: preview.artData.seed + 1 }} 
-                  width={400} 
-                  height={400} 
+                  width={320} 
+                  height={320} 
                 />
               </div>
-              <div className="p-3 text-center bg-secondary/50">
+              <div className="p-2 text-center bg-secondary/50 text-sm">
                 <span className="font-medium">Variant B</span>
-                {selectedVariant === 2 && (
-                  <span className="ml-2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded">
-                    Selected
-                  </span>
-                )}
               </div>
             </div>
           </div>
 
           <div className="text-center">
             {savedId ? (
-              <Button asChild>
+              <Button asChild size="sm">
                 <Link href={`/art/${savedId}`}>View in Gallery</Link>
               </Button>
             ) : (
-              <Button onClick={handleSave} disabled={saving}>
+              <Button onClick={handleSave} disabled={saving} size="sm">
                 {saving ? 'Saving...' : 'Save to Gallery'}
               </Button>
             )}
           </div>
         </section>
       )}
+
+      <section>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-semibold tracking-tight">Recent Artworks</h2>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/gallery">View All</Link>
+          </Button>
+        </div>
+
+        {galleryLoading ? (
+          <div className="text-center py-8 text-muted-foreground">Loading...</div>
+        ) : artworks.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            No artworks yet. Generate your first art above!
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {artworks.map((artwork) => (
+              <div key={artwork.id} className="relative group">
+                <Link href={`/art/${artwork.id}`} className="block">
+                  <Card className="overflow-hidden hover:-translate-y-1 transition-transform">
+                    <CardContent className="p-0">
+                      <div className="aspect-square bg-secondary">
+                        <SvgArtCanvas params={artwork.artData} width={200} height={200} />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-1 right-1 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDelete(artwork.id);
+                  }}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

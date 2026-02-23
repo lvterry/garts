@@ -29,9 +29,6 @@ export default function RootLayout({
             </Link>
             <div className="flex items-center gap-2">
               <Button variant="ghost" asChild>
-                <Link href="/">Generate</Link>
-              </Button>
-              <Button variant="ghost" asChild>
                 <Link href="/gallery">Gallery</Link>
               </Button>
             </div>
