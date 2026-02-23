@@ -21,8 +21,11 @@ const SvgArtCanvas = dynamic(() => import('@/components/SvgArtCanvas'), {
 interface PreviewData {
   keyword: string;
   mood: string;
-  artData: ArtParams;
+  mixed: ArtParams;
+  single: ArtParams;
 }
+
+type ArtAlgorithm = 'mixed' | 'single';
 
 interface ArtworkData {
   id: string;
@@ -46,17 +49,16 @@ async function generateArt(keyword: string): Promise<PreviewData> {
   return response.json();
 }
 
-async function saveArt(data: PreviewData & { seed: number }) {
+async function saveArt(data: PreviewData, algorithm: ArtAlgorithm) {
+  const artData = algorithm === 'mixed' ? data.mixed : data.single;
+  
   const response = await fetch('/api/art/save', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       keyword: data.keyword,
       mood: data.mood,
-      artData: {
-        ...data.artData,
-        seed: data.seed,
-      },
+      artData,
       format: 'svg',
     }),
   });
@@ -74,7 +76,7 @@ export default function Home() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState<PreviewData | null>(null);
-  const [selectedVariant, setSelectedVariant] = useState<1 | 2>(1);
+  const [selectedAlgorithm, setSelectedAlgorithm] = useState<ArtAlgorithm>('mixed');
   const [savedId, setSavedId] = useState<string | null>(null);
   const [artworks, setArtworks] = useState<ArtworkData[]>([]);
   const [galleryLoading, setGalleryLoading] = useState(true);
@@ -108,7 +110,7 @@ export default function Home() {
       const art = await generateArt(keyword.trim());
       setPreview(art);
       setKeyword('');
-      setSelectedVariant(1);
+      setSelectedAlgorithm('mixed');
     } catch (err) {
       setError('Failed to generate art. Please try again.');
     } finally {
@@ -119,11 +121,10 @@ export default function Home() {
   const handleSave = async () => {
     if (!preview) return;
 
-    const selectedSeed = selectedVariant === 1 ? preview.artData.seed : preview.artData.seed + 1;
-
     setSaving(true);
     try {
-      const result = await saveArt({ ...preview, seed: selectedSeed });
+      const result = await saveArt(preview, selectedAlgorithm);
+      setSavedId(result.id);
       setSavedId(result.id);
       const response = await fetch('/api/art?limit=6');
       const data = await response.json();
@@ -188,13 +189,13 @@ export default function Home() {
                 <div className="animate-pulse">
                   <div className="aspect-square bg-secondary rounded-xl" />
                   <div className="p-2 text-center bg-secondary/50 text-sm">
-                    <span className="font-medium text-muted-foreground">Variant A</span>
+                    <span className="font-medium text-muted-foreground">Mixed</span>
                   </div>
                 </div>
                 <div className="animate-pulse">
                   <div className="aspect-square bg-secondary rounded-xl" />
                   <div className="p-2 text-center bg-secondary/50 text-sm">
-                    <span className="font-medium text-muted-foreground">Variant B</span>
+                    <span className="font-medium text-muted-foreground">Single</span>
                   </div>
                 </div>
               </div>
@@ -212,37 +213,37 @@ export default function Home() {
               <div className="grid md:grid-cols-2 gap-4 mb-6">
                 <div 
                   className={`cursor-pointer rounded-xl overflow-hidden border-2 transition-all ${
-                    selectedVariant === 1 
+                    selectedAlgorithm === 'mixed' 
                       ? 'border-primary ring-2 ring-primary/50' 
                       : 'border-transparent hover:border-muted'
                   }`}
-                  onClick={() => setSelectedVariant(1)}
+                  onClick={() => setSelectedAlgorithm('mixed')}
                 >
                   <div className="aspect-square bg-secondary">
                     <SvgArtCanvas 
-                      params={{ ...preview.artData, seed: preview.artData.seed }} 
+                      params={preview.mixed} 
                     />
                   </div>
                   <div className="p-2 text-center bg-secondary/50 text-sm">
-                    <span className="font-medium">Variant A</span>
+                    <span className="font-medium">Mixed</span>
                   </div>
                 </div>
 
                 <div 
                   className={`cursor-pointer rounded-xl overflow-hidden border-2 transition-all ${
-                    selectedVariant === 2 
+                    selectedAlgorithm === 'single' 
                       ? 'border-primary ring-2 ring-primary/50' 
                       : 'border-transparent hover:border-muted'
                   }`}
-                  onClick={() => setSelectedVariant(2)}
+                  onClick={() => setSelectedAlgorithm('single')}
                 >
                   <div className="aspect-square bg-secondary">
                     <SvgArtCanvas 
-                      params={{ ...preview.artData, seed: preview.artData.seed + 1 }} 
+                      params={preview.single} 
                     />
                   </div>
                   <div className="p-2 text-center bg-secondary/50 text-sm">
-                    <span className="font-medium">Variant B</span>
+                    <span className="font-medium">Single</span>
                   </div>
                 </div>
               </div>

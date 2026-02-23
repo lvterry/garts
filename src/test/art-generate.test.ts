@@ -18,12 +18,13 @@ describe('POST /api/art/generate', () => {
       seed: 123456,
       mood: 'serene',
       colors: ['#a8d8ea'],
-      shapeType: 'circles',
+      shapeTypes: ['circles'],
       complexity: 3,
       motionSpeed: 2,
       chaosLevel: 2,
+      algorithm: 'mixed',
     });
-    (artParamsToJSON as ReturnType<typeof vi.fn>).mockReturnValue('{"seed":123456,"mood":"serene","colors":["#a8d8ea"],"shapeType":"circles","complexity":3,"motionSpeed":2,"chaosLevel":2}');
+    (artParamsToJSON as ReturnType<typeof vi.fn>).mockReturnValue('{"seed":123456,"mood":"serene","colors":["#a8d8ea"],"shapeTypes":["circles"],"complexity":3,"motionSpeed":2,"chaosLevel":2}');
 
     const handler = (await import('@/app/api/art/generate/route')).POST;
 
@@ -39,10 +40,11 @@ describe('POST /api/art/generate', () => {
     const data = await response.json();
     expect(data).toHaveProperty('keyword', 'sunset');
     expect(data).toHaveProperty('mood', 'serene');
-    expect(data).toHaveProperty('artData');
-    expect(data.artData).toHaveProperty('seed');
-    expect(data.artData).toHaveProperty('colors');
-    expect(data.artData).toHaveProperty('shapeType');
+    expect(data).toHaveProperty('mixed');
+    expect(data).toHaveProperty('single');
+    expect(data.mixed).toHaveProperty('seed');
+    expect(data.mixed).toHaveProperty('colors');
+    expect(data.mixed).toHaveProperty('shapeTypes');
   });
 
   it('returns 400 when keyword is missing', async () => {

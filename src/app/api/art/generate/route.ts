@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createMoodAnalyzer } from '@/lib/ai';
-import { generateArtParams, artParamsToJSON } from '@/lib/art-generator';
+import { generateArtParams, ArtAlgorithm } from '@/lib/art-generator';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,13 +27,14 @@ export async function POST(request: NextRequest) {
     const analyzer = createMoodAnalyzer();
     const moodResult = await analyzer.extractMood(trimmedKeyword);
 
-    const artParams = generateArtParams(moodResult.mood, trimmedKeyword);
-    const artData = artParamsToJSON(artParams);
+    const mixed = generateArtParams(moodResult.mood, trimmedKeyword, 'mixed');
+    const single = generateArtParams(moodResult.mood, trimmedKeyword, 'single');
 
     return NextResponse.json({
       keyword: trimmedKeyword,
       mood: moodResult.mood,
-      artData: JSON.parse(artData),
+      mixed,
+      single,
     });
   } catch (error: any) {
     console.error('Error generating art:', error);

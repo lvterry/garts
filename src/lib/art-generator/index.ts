@@ -1,3 +1,5 @@
+export type ArtAlgorithm = 'mixed' | 'single';
+
 export interface ArtParams {
   seed: number;
   mood: string;
@@ -11,6 +13,7 @@ export interface ArtParams {
   positionBias: 'center' | 'edge' | 'uniform';
   strokeWidth: number;
   layerCount: number;
+  algorithm: ArtAlgorithm;
 }
 
 interface ColorRanges {
@@ -278,7 +281,7 @@ function selectShapeTypes(
   return selected;
 }
 
-export function generateArtParams(mood: string, keyword?: string): ArtParams {
+export function generateArtParams(mood: string, keyword?: string, algorithm: ArtAlgorithm = 'mixed'): ArtParams {
   const seed = Math.floor(Math.random() * 1000000);
   const normalizedMood = mood.toLowerCase();
   const moodData = moodToParams[normalizedMood] || moodToParams.neutral;
@@ -292,7 +295,7 @@ export function generateArtParams(mood: string, keyword?: string): ArtParams {
     shapeMixCount: 1,
   };
   
-  const shapeCount = kwProps.shapeMixCount;
+  const shapeCount = algorithm === 'single' ? 1 : kwProps.shapeMixCount;
   const shapeTypes = selectShapeTypes(moodData.shapePool, shapeCount);
   
   const colors = generateColorPalette(normalizedMood, keyword || '', seed);
@@ -304,6 +307,7 @@ export function generateArtParams(mood: string, keyword?: string): ArtParams {
     mood: normalizedMood,
     colors,
     shapeTypes,
+    algorithm,
     complexity: randomInRange(hashSeed + 100, moodData.complexity[0], moodData.complexity[1]),
     motionSpeed: randomInRange(hashSeed + 200, moodData.motionSpeed[0], moodData.motionSpeed[1]),
     chaosLevel: randomInRange(hashSeed + 300, moodData.chaosLevel[0], moodData.chaosLevel[1]),
