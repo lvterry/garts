@@ -286,18 +286,18 @@ export default function SvgArtCanvas({ params, width = DEFAULT_SIZE, height = DE
       }}
     >
       <defs>
-        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id={`bgGrad-${params.seed}`} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor={backgroundColor} />
           <stop offset="100%" stopColor={gradientColor} />
         </linearGradient>
-        <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
+        <radialGradient id={`centerGlow-${params.seed}`} cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor={colors[0]} stopOpacity="0.3" />
           <stop offset="100%" stopColor="transparent" />
         </radialGradient>
       </defs>
       
-      <rect x="0" y="0" width={width} height={height} fill="url(#bgGrad)" />
-      <rect x="0" y="0" width={width} height={height} fill="url(#centerGlow)" />
+      <rect x="0" y="0" width={width} height={height} fill={`url(#bgGrad-${params.seed})`} />
+      <rect x="0" y="0" width={width} height={height} fill={`url(#centerGlow-${params.seed})`} />
       
       {renderAllLayers()}
     </svg>
