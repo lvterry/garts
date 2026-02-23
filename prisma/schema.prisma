@@ -13,5 +13,6 @@ model Artwork {
   keyword   String
   mood      String
   artData   String   // JSON stringified
+  format    String   @default("p5") // "p5" or "svg"
   createdAt DateTime @default(now())
 }

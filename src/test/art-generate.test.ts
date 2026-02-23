@@ -6,8 +6,7 @@ describe('POST /api/art/generate', () => {
     vi.resetModules();
   });
 
-  it('returns art data when given a valid keyword', async () => {
-    const { prisma } = await import('@/lib/prisma');
+  it('returns art preview data when given a valid keyword', async () => {
     const { createMoodAnalyzer } = await import('@/lib/ai');
     const { generateArtParams, artParamsToJSON } = await import('@/lib/art-generator');
 
@@ -24,16 +23,7 @@ describe('POST /api/art/generate', () => {
       motionSpeed: 2,
       chaosLevel: 2,
     });
-    (artParamsToJSON as ReturnType<typeof vi.fn>).mockReturnValue('{"seed":123456}');
-
-    const mockArtwork = {
-      id: 'test-id-123',
-      keyword: 'sunset',
-      mood: 'serene',
-      artData: '{"seed":123456,"mood":"serene","colors":["#a8d8ea"],"shapeType":"circles","complexity":3,"motionSpeed":2,"chaosLevel":2}',
-      createdAt: new Date('2024-01-01'),
-    };
-    (prisma.artwork.create as ReturnType<typeof vi.fn>).mockResolvedValue(mockArtwork);
+    (artParamsToJSON as ReturnType<typeof vi.fn>).mockReturnValue('{"seed":123456,"mood":"serene","colors":["#a8d8ea"],"shapeType":"circles","complexity":3,"motionSpeed":2,"chaosLevel":2}');
 
     const handler = (await import('@/app/api/art/generate/route')).POST;
 
@@ -47,7 +37,6 @@ describe('POST /api/art/generate', () => {
 
     expect(response.status).toBe(200);
     const data = await response.json();
-    expect(data).toHaveProperty('id');
     expect(data).toHaveProperty('keyword', 'sunset');
     expect(data).toHaveProperty('mood', 'serene');
     expect(data).toHaveProperty('artData');

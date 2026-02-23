@@ -18,10 +18,20 @@ const ArtCanvas = dynamic(() => import('@/components/ArtCanvas'), {
   ),
 });
 
+const SvgArtCanvas = dynamic(() => import('@/components/SvgArtCanvas'), {
+  ssr: false,
+  loading: () => (
+    <div className="aspect-square bg-secondary rounded-xl flex items-center justify-center">
+      Loading canvas...
+    </div>
+  ),
+});
+
 interface ArtworkData {
   id: string;
   keyword: string;
   mood: string;
+  format: string;
   artData: ArtParams;
   createdAt: string;
 }
@@ -81,6 +91,8 @@ export default function ArtDetailPage() {
     );
   }
 
+  const isSvg = artwork.format === 'svg';
+
   return (
     <div className="max-w-3xl mx-auto">
       <Button variant="ghost" asChild className="mb-6">
@@ -98,7 +110,11 @@ export default function ArtDetailPage() {
               </div>
             }
           >
-            <ArtCanvas params={artwork.artData} width={500} height={500} />
+            {isSvg ? (
+              <SvgArtCanvas params={artwork.artData} width={500} height={500} />
+            ) : (
+              <ArtCanvas params={artwork.artData} width={500} height={500} />
+            )}
           </ErrorBoundary>
         </div>
 
@@ -111,6 +127,10 @@ export default function ArtDetailPage() {
             <div className="pb-4 border-b border-border">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Mood</p>
               <p className="font-medium capitalize text-muted-foreground">{artwork.mood}</p>
+            </div>
+            <div className="pb-4 border-b border-border">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Format</p>
+              <p className="font-medium text-muted-foreground uppercase">{artwork.format}</p>
             </div>
             <div className="pb-4 border-b border-border">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Created</p>

@@ -6,6 +6,7 @@ type ArtworkRecord = {
   keyword: string;
   mood: string;
   artData: string;
+  format: string;
   createdAt: Date;
 };
 
@@ -31,6 +32,7 @@ export async function GET(request: NextRequest) {
         id: art.id,
         keyword: art.keyword,
         mood: art.mood,
+        format: art.format,
         artData: JSON.parse(art.artData),
         createdAt: art.createdAt.toISOString(),
       })),

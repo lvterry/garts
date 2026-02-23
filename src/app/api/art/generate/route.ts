@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { createMoodAnalyzer } from '@/lib/ai';
 import { generateArtParams, artParamsToJSON } from '@/lib/art-generator';
 
@@ -31,20 +30,10 @@ export async function POST(request: NextRequest) {
     const artParams = generateArtParams(moodResult.mood);
     const artData = artParamsToJSON(artParams);
 
-    const artwork = await prisma.artwork.create({
-      data: {
-        keyword: trimmedKeyword,
-        mood: moodResult.mood,
-        artData,
-      },
-    });
-
     return NextResponse.json({
-      id: artwork.id,
-      keyword: artwork.keyword,
-      mood: artwork.mood,
-      artData: JSON.parse(artwork.artData),
-      createdAt: artwork.createdAt.toISOString(),
+      keyword: trimmedKeyword,
+      mood: moodResult.mood,
+      artData: JSON.parse(artData),
     });
   } catch (error: any) {
     console.error('Error generating art:', error);

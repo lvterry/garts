@@ -21,6 +21,17 @@ interface ArtCanvasProps {
   height?: number;
 }
 
+function seededRandom(seed: number, min: number, max: number): number {
+  const x = Math.sin(seed) * 10000;
+  const fraction = x - Math.floor(x);
+  return min + fraction * (max - min);
+}
+
+function seededNoise(seed: number, x: number, y: number = 0): number {
+  const n = Math.sin(seed * 12.9898 + x * 78.233 + y * 43.758) * 43758.5453;
+  return n - Math.floor(n);
+}
+
 export default function ArtCanvas({ params, width = 500, height = 500 }: ArtCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -80,28 +91,29 @@ export default function ArtCanvas({ params, width = 500, height = 500 }: ArtCanv
     );
   }
 
+  const { seed, colors, shapeType, complexity } = params;
+
   const setup = (p5: any) => {
     p5.createCanvas(width, height).parent(canvasRef.current!);
-    p5.randomSeed(params.seed);
-    p5.noiseSeed(params.seed);
+    p5.randomSeed(seed);
+    p5.noiseSeed(seed);
   };
 
   const draw = (p5: any) => {
     p5.background(24, 24, 27);
-    const { colors, shapeType, complexity, motionSpeed, chaosLevel } = params;
-
+    
     const numShapes = complexity * 8;
-    const speed = motionSpeed * 0.5;
-    const chaos = chaosLevel * 2;
+    const chaos = params.chaosLevel * 2;
 
     for (let i = 0; i < numShapes; i++) {
       p5.push();
-      const baseX = p5.random(width);
-      const baseY = p5.random(height);
-      const size = p5.random(20, 80 + complexity * 10);
+      
+      const baseX = seededRandom(seed + i * 100, 0, width);
+      const baseY = seededRandom(seed + i * 200, 0, height);
+      const size = seededRandom(seed + i * 300, 20, 80 + complexity * 10);
 
-      const offsetX = p5.noise(i * 0.1 + p5.frameCount * 0.01 * speed) * chaos * 10 - chaos * 5;
-      const offsetY = p5.noise(i * 0.1 + 100 + p5.frameCount * 0.01 * speed) * chaos * 10 - chaos * 5;
+      const offsetX = seededNoise(seed + i * 10, 0) * chaos * 10 - chaos * 5;
+      const offsetY = seededNoise(seed + i * 10, 100) * chaos * 10 - chaos * 5;
 
       const colorIndex = i % colors.length;
       const col = p5.color(colors[colorIndex]);
@@ -111,19 +123,19 @@ export default function ArtCanvas({ params, width = 500, height = 500 }: ArtCanv
 
       switch (shapeType) {
         case 'circles':
-          drawCircle(p5, baseX + offsetX, baseY + offsetY, size, i);
+          p5.circle(baseX + offsetX, baseY + offsetY, size);
           break;
         case 'triangles':
-          drawTriangle(p5, baseX + offsetX, baseY + offsetY, size, i, p5);
+          drawTriangle(p5, baseX + offsetX, baseY + offsetY, size, seed + i);
           break;
         case 'lines':
-          drawLine(p5, baseX + offsetX, baseY + offsetY, size, i, p5);
+          drawLine(p5, baseX + offsetX, baseY + offsetY, size, seed + i);
           break;
         case 'spirals':
-          drawSpiral(p5, baseX + offsetX, baseY + offsetY, size, i);
+          drawSpiral(p5, baseX + offsetX, baseY + offsetY, size, seed + i);
           break;
         case 'waves':
-          drawWave(p5, i, width, height, colors, complexity);
+          drawWave(p5, seed + i, width, height, colors, complexity);
           p5.pop();
           return;
       }
@@ -131,13 +143,8 @@ export default function ArtCanvas({ params, width = 500, height = 500 }: ArtCanv
     }
   };
 
-  const drawCircle = (p5: any, x: number, y: number, size: number, i: number) => {
-    const pulse = p5.sin(p5.frameCount * 0.02 + i * 0.5) * 5;
-    p5.circle(x, y, size + pulse);
-  };
-
-  const drawTriangle = (p5: any, x: number, y: number, size: number, i: number, p5ref: any) => {
-    const rotation = p5.frameCount * 0.01 + i * 0.2;
+  const drawTriangle = (p5: any, x: number, y: number, size: number, localSeed: number) => {
+    const rotation = seededRandom(localSeed, 0, p5.TWO_PI);
     p5.translate(x, y);
     p5.rotate(rotation);
     const vertices = 3;
@@ -152,10 +159,10 @@ export default function ArtCanvas({ params, width = 500, height = 500 }: ArtCanv
     p5.endShape(p5.CLOSE);
   };
 
-  const drawLine = (p5: any, x: number, y: number, size: number, i: number, p5ref: any) => {
-    const angle = p5.frameCount * 0.02 + i * 0.3;
+  const drawLine = (p5: any, x: number, y: number, size: number, localSeed: number) => {
+    const angle = seededRandom(localSeed, 0, p5.TWO_PI);
     const len = size * 2;
-    p5.strokeWeight(p5.random(1, 4));
+    p5.strokeWeight(seededRandom(localSeed + 1, 1, 4));
     p5.line(
       x,
       y,
@@ -164,10 +171,10 @@ export default function ArtCanvas({ params, width = 500, height = 500 }: ArtCanv
     );
   };
 
-  const drawSpiral = (p5: any, x: number, y: number, size: number, i: number) => {
+  const drawSpiral = (p5: any, x: number, y: number, size: number, localSeed: number) => {
     p5.translate(x, y);
     const maxRadius = size;
-    const turns = p5.map(i % 5, 0, 4, 3, 8);
+    const turns = seededRandom(localSeed, 3, 8);
     p5.noFill();
     p5.beginShape();
     for (let t = 0; t < turns * p5.TWO_PI; t += 0.1) {
@@ -179,7 +186,7 @@ export default function ArtCanvas({ params, width = 500, height = 500 }: ArtCanv
     p5.endShape();
   };
 
-  const drawWave = (p5: any, i: number, w: number, h: number, colors: string[], complexity: number) => {
+  const drawWave = (p5: any, localSeed: number, w: number, h: number, colors: string[], complexity: number) => {
     for (let layer = 0; layer < complexity; layer++) {
       const col = p5.color(colors[layer % colors.length]);
       col.setAlpha(150);
@@ -193,7 +200,7 @@ export default function ArtCanvas({ params, width = 500, height = 500 }: ArtCanv
       
       p5.beginShape();
       for (let x = 0; x < w; x += 5) {
-        const y = yOffset + p5.sin(x * frequency + p5.frameCount * 0.02) * amplitude;
+        const y = yOffset + p5.sin(x * frequency) * amplitude;
         p5.vertex(x, y);
       }
       p5.endShape();

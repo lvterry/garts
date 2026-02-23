@@ -24,6 +24,7 @@ export async function GET(
       id: artwork.id,
       keyword: artwork.keyword,
       mood: artwork.mood,
+      format: artwork.format,
       artData: JSON.parse(artwork.artData),
       createdAt: artwork.createdAt.toISOString(),
     });

@@ -6,19 +6,33 @@ import Link from 'next/link';
 import { ArtParams } from '@/components/ArtCanvas';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
 
 const ArtCanvas = dynamic(() => import('@/components/ArtCanvas'), {
   ssr: false,
+  loading: () => (
+    <div className="aspect-square bg-secondary rounded-xl flex items-center justify-center">
+      Loading...
+    </div>
+  ),
 });
 
-interface GenerateResult {
-  id: string;
+const SvgArtCanvas = dynamic(() => import('@/components/SvgArtCanvas'), {
+  ssr: false,
+  loading: () => (
+    <div className="aspect-square bg-secondary rounded-xl flex items-center justify-center">
+      Loading...
+    </div>
+  ),
+});
+
+interface PreviewData {
   keyword: string;
   mood: string;
   artData: ArtParams;
 }
 
-async function generateArt(keyword: string): Promise<GenerateResult> {
+async function generateArt(keyword: string): Promise<PreviewData> {
   const response = await fetch('/api/art/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -32,27 +46,60 @@ async function generateArt(keyword: string): Promise<GenerateResult> {
   return response.json();
 }
 
+async function saveArt(data: PreviewData & { format: string }) {
+  const response = await fetch('/api/art/save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to save art');
+  }
+
+  return response.json();
+}
+
 export default function Home() {
   const [keyword, setKeyword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [generatedArt, setGeneratedArt] = useState<GenerateResult | null>(null);
+  const [preview, setPreview] = useState<PreviewData | null>(null);
+  const [selectedFormat, setSelectedFormat] = useState<'p5' | 'svg'>('p5');
+  const [savedId, setSavedId] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!keyword.trim()) return;
 
     setLoading(true);
     setError('');
+    setPreview(null);
+    setSavedId(null);
 
     try {
       const art = await generateArt(keyword.trim());
-      setGeneratedArt(art);
+      setPreview(art);
       setKeyword('');
     } catch (err) {
       setError('Failed to generate art. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!preview) return;
+
+    setSaving(true);
+    try {
+      const result = await saveArt({ ...preview, format: selectedFormat });
+      setSavedId(result.id);
+    } catch (err) {
+      setError('Failed to save art. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -68,7 +115,7 @@ export default function Home() {
       </section>
 
       <section className="flex justify-center mb-16">
-        <form onSubmit={handleSubmit} className="flex gap-3 w-full max-w-md">
+        <form onSubmit={handleGenerate} className="flex gap-3 w-full max-w-md">
           <Input
             type="text"
             value={keyword}
@@ -86,19 +133,71 @@ export default function Home() {
         <p className="text-center text-destructive mb-8">{error}</p>
       )}
 
-      {generatedArt && (
-        <section className="text-center">
-          <div className="flex justify-center mb-6">
-            <ArtCanvas params={generatedArt.artData} width={500} height={500} />
+      {preview && (
+        <section className="max-w-4xl mx-auto">
+          <div className="text-center mb-6">
+            <p className="text-muted-foreground">
+              <span className="font-semibold text-foreground">{preview.keyword}</span>
+              {' → '}
+              <span className="capitalize">{preview.mood}</span>
+            </p>
           </div>
-          <p className="mb-6 text-muted-foreground">
-            <span className="font-semibold text-foreground">{generatedArt.keyword}</span>
-            {' → '}
-            <span className="capitalize">{generatedArt.mood}</span>
-          </p>
-          <Button asChild>
-            <Link href="/gallery">View in Gallery</Link>
-          </Button>
+
+          <div className="grid md:grid-cols-2 gap-8 mb-8">
+            <div 
+              className={`cursor-pointer rounded-xl overflow-hidden border-2 transition-all ${
+                selectedFormat === 'p5' 
+                  ? 'border-primary ring-2 ring-primary/50' 
+                  : 'border-transparent hover:border-muted'
+              }`}
+              onClick={() => setSelectedFormat('p5')}
+            >
+              <div className="aspect-square bg-secondary">
+                <ArtCanvas params={preview.artData} width={400} height={400} />
+              </div>
+              <div className="p-3 text-center bg-secondary/50">
+                <span className="font-medium">p5.js</span>
+                {selectedFormat === 'p5' && (
+                  <span className="ml-2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded">
+                    Selected
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div 
+              className={`cursor-pointer rounded-xl overflow-hidden border-2 transition-all ${
+                selectedFormat === 'svg' 
+                  ? 'border-primary ring-2 ring-primary/50' 
+                  : 'border-transparent hover:border-muted'
+              }`}
+              onClick={() => setSelectedFormat('svg')}
+            >
+              <div className="aspect-square bg-secondary">
+                <SvgArtCanvas params={preview.artData} width={400} height={400} />
+              </div>
+              <div className="p-3 text-center bg-secondary/50">
+                <span className="font-medium">SVG</span>
+                {selectedFormat === 'svg' && (
+                  <span className="ml-2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded">
+                    Selected
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center">
+            {savedId ? (
+              <Button asChild>
+                <Link href={`/art/${savedId}`}>View in Gallery</Link>
+              </Button>
+            ) : (
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? 'Saving...' : 'Save to Gallery'}
+              </Button>
+            )}
+          </div>
         </section>
       )}
     </div>
