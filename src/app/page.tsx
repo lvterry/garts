@@ -3,19 +3,9 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { ArtParams } from '@/components/ArtCanvas';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-
-const ArtCanvas = dynamic(() => import('@/components/ArtCanvas'), {
-  ssr: false,
-  loading: () => (
-    <div className="aspect-square bg-secondary rounded-xl flex items-center justify-center">
-      Loading...
-    </div>
-  ),
-});
+import { ArtParams } from '@/components/SvgArtCanvas';
 
 const SvgArtCanvas = dynamic(() => import('@/components/SvgArtCanvas'), {
   ssr: false,
@@ -46,11 +36,19 @@ async function generateArt(keyword: string): Promise<PreviewData> {
   return response.json();
 }
 
-async function saveArt(data: PreviewData & { format: string }) {
+async function saveArt(data: PreviewData & { seed: number }) {
   const response = await fetch('/api/art/save', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      keyword: data.keyword,
+      mood: data.mood,
+      artData: {
+        ...data.artData,
+        seed: data.seed,
+      },
+      format: 'svg',
+    }),
   });
 
   if (!response.ok) {
@@ -66,7 +64,7 @@ export default function Home() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState<PreviewData | null>(null);
-  const [selectedFormat, setSelectedFormat] = useState<'p5' | 'svg'>('p5');
+  const [selectedVariant, setSelectedVariant] = useState<1 | 2>(1);
   const [savedId, setSavedId] = useState<string | null>(null);
 
   const handleGenerate = async (e: React.FormEvent) => {
@@ -82,6 +80,7 @@ export default function Home() {
       const art = await generateArt(keyword.trim());
       setPreview(art);
       setKeyword('');
+      setSelectedVariant(1);
     } catch (err) {
       setError('Failed to generate art. Please try again.');
     } finally {
@@ -92,9 +91,11 @@ export default function Home() {
   const handleSave = async () => {
     if (!preview) return;
 
+    const selectedSeed = selectedVariant === 1 ? preview.artData.seed : preview.artData.seed + 1;
+
     setSaving(true);
     try {
-      const result = await saveArt({ ...preview, format: selectedFormat });
+      const result = await saveArt({ ...preview, seed: selectedSeed });
       setSavedId(result.id);
     } catch (err) {
       setError('Failed to save art. Please try again.');
@@ -146,18 +147,22 @@ export default function Home() {
           <div className="grid md:grid-cols-2 gap-8 mb-8">
             <div 
               className={`cursor-pointer rounded-xl overflow-hidden border-2 transition-all ${
-                selectedFormat === 'p5' 
+                selectedVariant === 1 
                   ? 'border-primary ring-2 ring-primary/50' 
                   : 'border-transparent hover:border-muted'
               }`}
-              onClick={() => setSelectedFormat('p5')}
+              onClick={() => setSelectedVariant(1)}
             >
-              <div className="aspect-square bg-secondary">
-                <ArtCanvas params={preview.artData} width={400} height={400} />
+              <div className="aspect-square bg-secondary rounded-xl overflow-hidden">
+                <SvgArtCanvas 
+                  params={{ ...preview.artData, seed: preview.artData.seed }} 
+                  width={400} 
+                  height={400} 
+                />
               </div>
               <div className="p-3 text-center bg-secondary/50">
-                <span className="font-medium">p5.js</span>
-                {selectedFormat === 'p5' && (
+                <span className="font-medium">Variant A</span>
+                {selectedVariant === 1 && (
                   <span className="ml-2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded">
                     Selected
                   </span>
@@ -167,18 +172,22 @@ export default function Home() {
 
             <div 
               className={`cursor-pointer rounded-xl overflow-hidden border-2 transition-all ${
-                selectedFormat === 'svg' 
+                selectedVariant === 2 
                   ? 'border-primary ring-2 ring-primary/50' 
                   : 'border-transparent hover:border-muted'
               }`}
-              onClick={() => setSelectedFormat('svg')}
+              onClick={() => setSelectedVariant(2)}
             >
-              <div className="aspect-square bg-secondary">
-                <SvgArtCanvas params={preview.artData} width={400} height={400} />
+              <div className="aspect-square bg-secondary rounded-xl overflow-hidden">
+                <SvgArtCanvas 
+                  params={{ ...preview.artData, seed: preview.artData.seed + 1 }} 
+                  width={400} 
+                  height={400} 
+                />
               </div>
               <div className="p-3 text-center bg-secondary/50">
-                <span className="font-medium">SVG</span>
-                {selectedFormat === 'svg' && (
+                <span className="font-medium">Variant B</span>
+                {selectedVariant === 2 && (
                   <span className="ml-2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded">
                     Selected
                   </span>

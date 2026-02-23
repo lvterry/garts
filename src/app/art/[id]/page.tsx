@@ -4,19 +4,10 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import type { ArtParams } from '@/components/ArtCanvas';
+import type { ArtParams } from '@/components/SvgArtCanvas';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-
-const ArtCanvas = dynamic(() => import('@/components/ArtCanvas'), {
-  ssr: false,
-  loading: () => (
-    <div className="aspect-square bg-secondary rounded-xl flex items-center justify-center">
-      Loading canvas...
-    </div>
-  ),
-});
 
 const SvgArtCanvas = dynamic(() => import('@/components/SvgArtCanvas'), {
   ssr: false,
@@ -31,7 +22,6 @@ interface ArtworkData {
   id: string;
   keyword: string;
   mood: string;
-  format: string;
   artData: ArtParams;
   createdAt: string;
 }
@@ -91,8 +81,6 @@ export default function ArtDetailPage() {
     );
   }
 
-  const isSvg = artwork.format === 'svg';
-
   return (
     <div className="max-w-3xl mx-auto">
       <Button variant="ghost" asChild className="mb-6">
@@ -110,11 +98,7 @@ export default function ArtDetailPage() {
               </div>
             }
           >
-            {isSvg ? (
-              <SvgArtCanvas params={artwork.artData} width={500} height={500} />
-            ) : (
-              <ArtCanvas params={artwork.artData} width={500} height={500} />
-            )}
+            <SvgArtCanvas params={artwork.artData} width={500} height={500} />
           </ErrorBoundary>
         </div>
 
@@ -127,10 +111,6 @@ export default function ArtDetailPage() {
             <div className="pb-4 border-b border-border">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Mood</p>
               <p className="font-medium capitalize text-muted-foreground">{artwork.mood}</p>
-            </div>
-            <div className="pb-4 border-b border-border">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Format</p>
-              <p className="font-medium text-muted-foreground uppercase">{artwork.format}</p>
             </div>
             <div className="pb-4 border-b border-border">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Created</p>

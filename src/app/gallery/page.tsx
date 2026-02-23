@@ -3,15 +3,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { ArtParams } from '@/components/ArtCanvas';
+import type { ArtParams } from '@/components/SvgArtCanvas';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Trash2 } from 'lucide-react';
-
-const ArtCanvas = dynamic(() => import('@/components/ArtCanvas'), {
-  ssr: false,
-  loading: () => <div className="aspect-square bg-secondary" />,
-});
 
 const SvgArtCanvas = dynamic(() => import('@/components/SvgArtCanvas'), {
   ssr: false,
@@ -22,7 +17,6 @@ interface ArtworkData {
   id: string;
   keyword: string;
   mood: string;
-  format: string;
   artData: ArtParams;
   createdAt: string;
 }
@@ -88,11 +82,7 @@ export default function GalleryPage() {
                 <Card className="overflow-hidden hover:-translate-y-1 transition-transform">
                   <CardContent className="p-0">
                     <div className="aspect-square bg-secondary">
-                      {artwork.format === 'svg' ? (
-                        <SvgArtCanvas params={artwork.artData} width={400} height={400} />
-                      ) : (
-                        <ArtCanvas params={artwork.artData} width={400} height={400} />
-                      )}
+                      <SvgArtCanvas params={artwork.artData} width={400} height={400} />
                     </div>
                     <div className="px-4 py-3 flex justify-between items-center">
                       <span className="font-medium">{artwork.keyword}</span>

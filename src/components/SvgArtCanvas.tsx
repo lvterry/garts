@@ -1,6 +1,14 @@
 'use client';
 
-import { ArtParams } from './ArtCanvas';
+export interface ArtParams {
+  seed: number;
+  mood: string;
+  colors: string[];
+  shapeType: 'circles' | 'triangles' | 'lines' | 'spirals' | 'waves';
+  complexity: number;
+  motionSpeed: number;
+  chaosLevel: number;
+}
 
 interface SvgArtCanvasProps {
   params: ArtParams;
