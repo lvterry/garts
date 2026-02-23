@@ -149,7 +149,7 @@ export default function Home() {
   return (
     <div>
       <section className="text-center max-w-2xl mx-auto mb-10">
-        <h1 className="text-4xl font-semibold tracking-tight mb-3 text-white">
+        <h1 className="text-4xl font-semibold tracking-tight mb-3 text-foreground">
           Generative Art from Your Mood
         </h1>
         <p className="text-gray-400">
@@ -196,7 +196,7 @@ export default function Home() {
               }`}
               onClick={() => setSelectedVariant(1)}
             >
-              <div className="aspect-square bg-secondary rounded-xl overflow-hidden">
+              <div className="aspect-square bg-secondary">
                 <SvgArtCanvas 
                   params={{ ...preview.artData, seed: preview.artData.seed }} 
                   width={320} 
@@ -216,7 +216,7 @@ export default function Home() {
               }`}
               onClick={() => setSelectedVariant(2)}
             >
-              <div className="aspect-square bg-secondary rounded-xl overflow-hidden">
+              <div className="aspect-square bg-secondary">
                 <SvgArtCanvas 
                   params={{ ...preview.artData, seed: preview.artData.seed + 1 }} 
                   width={320} 
