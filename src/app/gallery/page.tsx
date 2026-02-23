@@ -4,9 +4,16 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { ArtParams } from '@/components/ArtCanvas';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Trash2 } from 'lucide-react';
 
 const ArtCanvas = dynamic(() => import('@/components/ArtCanvas'), {
+  ssr: false,
+  loading: () => <div className="aspect-square bg-secondary" />,
+});
+
+const SvgArtCanvas = dynamic(() => import('@/components/SvgArtCanvas'), {
   ssr: false,
   loading: () => <div className="aspect-square bg-secondary" />,
 });
@@ -15,6 +22,7 @@ interface ArtworkData {
   id: string;
   keyword: string;
   mood: string;
+  format: string;
   artData: ArtParams;
   createdAt: string;
 }
@@ -23,6 +31,7 @@ export default function GalleryPage() {
   const [artworks, setArtworks] = useState<ArtworkData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchArtworks() {
@@ -40,6 +49,21 @@ export default function GalleryPage() {
     }
     fetchArtworks();
   }, []);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this artwork?')) return;
+
+    setDeletingId(id);
+    try {
+      const response = await fetch(`/api/art/${id}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Failed to delete');
+      setArtworks(artworks.filter((a) => a.id !== id));
+    } catch (err) {
+      alert('Failed to delete artwork');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div>
@@ -59,19 +83,42 @@ export default function GalleryPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {artworks.map((artwork) => (
-            <Link href={`/art/${artwork.id}`} key={artwork.id} className="block">
-              <Card className="overflow-hidden hover:-translate-y-1 transition-transform">
-                <CardContent className="p-0">
-                  <div className="aspect-square bg-secondary">
-                    <ArtCanvas params={artwork.artData} width={400} height={400} />
-                  </div>
-                  <div className="px-4 py-3 flex justify-between items-center">
-                    <span className="font-medium">{artwork.keyword}</span>
-                    <span className="text-sm text-muted-foreground capitalize">{artwork.mood}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+            <div key={artwork.id} className="relative group">
+              <Link href={`/art/${artwork.id}`} className="block">
+                <Card className="overflow-hidden hover:-translate-y-1 transition-transform">
+                  <CardContent className="p-0">
+                    <div className="aspect-square bg-secondary">
+                      {artwork.format === 'svg' ? (
+                        <SvgArtCanvas params={artwork.artData} width={400} height={400} />
+                      ) : (
+                        <ArtCanvas params={artwork.artData} width={400} height={400} />
+                      )}
+                    </div>
+                    <div className="px-4 py-3 flex justify-between items-center">
+                      <span className="font-medium">{artwork.keyword}</span>
+                      <span className="text-sm text-muted-foreground capitalize">{artwork.mood}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+              <Button
+                variant="destructive"
+                size="icon"
+                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleDelete(artwork.id);
+                }}
+                disabled={deletingId === artwork.id}
+              >
+                {deletingId === artwork.id ? (
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
           ))}
         </div>
       )}
