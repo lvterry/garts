@@ -7,7 +7,7 @@ export class KimiMoodAnalyzer implements MoodAnalyzer {
   constructor() {
     this.client = new OpenAI({
       apiKey: process.env.KIMI_API_KEY,
-      baseURL: 'https://api.moonshot.ai/v1',
+      baseURL: 'https://api.moonshot.cn/v1',
     });
   }
 
