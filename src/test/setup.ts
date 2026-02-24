@@ -1,5 +1,3 @@
-import { beforeAll } from 'vitest';
-
 const mockArtwork = {
   id: 'test-id-123',
   keyword: 'sunset',

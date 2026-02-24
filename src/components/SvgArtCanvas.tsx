@@ -244,45 +244,10 @@ function renderShapesForType(
   return elements;
 }
 
-function getLightness(hex: string): number {
-  const r = parseInt(hex.slice(1, 3), 16) / 255;
-  const g = parseInt(hex.slice(3, 5), 16) / 255;
-  const b = parseInt(hex.slice(5, 7), 16) / 255;
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  return (max + min) / 2 * 100;
-}
-
-function getDarkestColor(colors: string[]): string {
-  let darkest = colors[0];
-  let minL = 100;
-  
-  for (const color of colors) {
-    try {
-      const l = getLightness(color);
-      if (l < minL) {
-        minL = l;
-        darkest = color;
-      }
-    } catch {
-      continue;
-    }
-  }
-  return darkest;
-}
-
-function getBackgroundColor(colors: string[]): string {
-  try {
-    return getDarkestColor(colors);
-  } catch {
-    return '#18181b';
-  }
-}
-
 export default function SvgArtCanvas({ params }: SvgArtCanvasProps) {
   const width = DEFAULT_SIZE;
   const height = DEFAULT_SIZE;
-  const { colors, backgroundColors, shapeTypes, layerCount } = params;
+  const { backgroundColors, shapeTypes, layerCount } = params;
   
   const bgColor = backgroundColors?.[0] || '#0a0a12';
   

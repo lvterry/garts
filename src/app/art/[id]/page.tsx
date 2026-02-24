@@ -43,7 +43,7 @@ export default function ArtDetailPage() {
         if (!response.ok) throw new Error('Not found');
         const data = await response.json();
         setArtwork(data);
-      } catch (err) {
+      } catch {
         setError('Artwork not found');
       } finally {
         setLoading(false);
@@ -60,7 +60,7 @@ export default function ArtDetailPage() {
       const response = await fetch(`/api/art/${id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete');
       router.push('/gallery');
-    } catch (err) {
+    } catch {
       alert('Failed to delete artwork');
       setDeleting(false);
     }

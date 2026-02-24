@@ -1,12 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import {
+  Activity,
+  Hash,
+  Layers3,
+  Palette,
+  SlidersHorizontal,
+  Sparkles,
+  Trash2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Trash2 } from 'lucide-react';
 import { ArtParams } from '@/components/SvgArtCanvas';
 
 const SvgArtCanvas = dynamic(() => import('@/components/SvgArtCanvas'), {
@@ -31,6 +39,23 @@ interface ArtworkData {
   artData: ArtParams;
   createdAt: string;
 }
+
+type StageStatus = 'pending' | 'active' | 'done';
+
+const GENERATION_STEPS = [
+  {
+    label: 'Analyze mood',
+    description: 'Interpreting your keyword and mapping mood signal.',
+  },
+  {
+    label: 'Build parameters',
+    description: 'Deriving deterministic artwork controls.',
+  },
+  {
+    label: 'Render preview',
+    description: 'Drawing shapes and colors from generated params.',
+  },
+] as const;
 
 async function generateArt(keyword: string): Promise<PreviewData> {
   const response = await fetch('/api/art/generate', {
@@ -65,6 +90,31 @@ async function saveArt(data: PreviewData) {
   return response.json();
 }
 
+function formatValue(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2);
+}
+
+function getStepStatus(
+  index: number,
+  currentStep: number,
+  loading: boolean,
+  hasPreview: boolean
+): StageStatus {
+  if (hasPreview && !loading) {
+    return 'done';
+  }
+
+  if (index === currentStep) {
+    return 'active';
+  }
+
+  if (index < currentStep) {
+    return 'done';
+  }
+
+  return 'pending';
+}
+
 export default function Home() {
   const [keyword, setKeyword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -74,6 +124,7 @@ export default function Home() {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [artworks, setArtworks] = useState<ArtworkData[]>([]);
   const [galleryLoading, setGalleryLoading] = useState(true);
+  const [stepIndex, setStepIndex] = useState(0);
 
   useEffect(() => {
     async function fetchArtworks() {
@@ -91,7 +142,20 @@ export default function Home() {
     fetchArtworks();
   }, []);
 
-  const handleGenerate = async (e: React.FormEvent) => {
+  useEffect(() => {
+    if (!loading) return;
+
+    setStepIndex(0);
+    const firstTimer = window.setTimeout(() => setStepIndex(1), 380);
+    const secondTimer = window.setTimeout(() => setStepIndex(2), 780);
+
+    return () => {
+      window.clearTimeout(firstTimer);
+      window.clearTimeout(secondTimer);
+    };
+  }, [loading]);
+
+  const handleGenerate = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!keyword.trim()) return;
 
@@ -104,7 +168,7 @@ export default function Home() {
       const art = await generateArt(keyword.trim());
       setPreview(art);
       setKeyword('');
-    } catch (err) {
+    } catch {
       setError('Failed to generate art. Please try again.');
     } finally {
       setLoading(false);
@@ -118,11 +182,10 @@ export default function Home() {
     try {
       const result = await saveArt(preview);
       setSavedId(result.id);
-      setSavedId(result.id);
       const response = await fetch('/api/art?limit=6');
       const data = await response.json();
       setArtworks(data.artworks);
-    } catch (err) {
+    } catch {
       setError('Failed to save art. Please try again.');
     } finally {
       setSaving(false);
@@ -135,7 +198,7 @@ export default function Home() {
     try {
       await fetch(`/api/art/${id}`, { method: 'DELETE' });
       setArtworks(artworks.filter((a) => a.id !== id));
-    } catch (err) {
+    } catch {
       alert('Failed to delete artwork');
     }
   };
@@ -147,76 +210,200 @@ export default function Home() {
           Generative Art from Your Mood
         </h1>
         <p className="text-gray-400">
-          Enter a keyword and let AI extract the mood to generate unique art
+          Enter a keyword and inspect how AI parameters shape your artwork
         </p>
       </section>
 
       <section className="flex justify-center mb-12">
-        <form onSubmit={handleGenerate} className="flex gap-2 w-full max-w-sm">
+        <form onSubmit={handleGenerate} className="flex gap-2 w-full max-w-md">
           <Input
             type="text"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="Enter a keyword..."
             disabled={loading}
-            className="h-9"
+            className="h-10"
           />
-          <Button type="submit" disabled={loading || !keyword.trim()} size="sm">
-            {loading ? '...' : 'Generate'}
+          <Button type="submit" disabled={loading || !keyword.trim()}>
+            {loading ? 'Generating...' : 'Generate'}
           </Button>
         </form>
       </section>
 
-      {error && (
-        <p className="text-center text-destructive mb-6">{error}</p>
-      )}
+      {error && <p className="text-center text-destructive mb-6">{error}</p>}
 
       {(loading || preview) && (
-        <section className="max-w-4xl mx-auto mb-12">
-          {loading ? (
-            <>
-              <div className="text-center mb-4">
-                <p className="text-muted-foreground">Generating...</p>
-              </div>
-              <div className="flex justify-center mb-6">
-                <div className="animate-pulse">
-                  <div className="aspect-square bg-secondary rounded-xl w-80" />
+        <section className="max-w-6xl mx-auto mb-12">
+          <div className="grid gap-6 lg:grid-cols-[1.15fr,0.85fr]">
+            <Card className="border-primary/30 shadow-sm">
+              <CardContent className="p-5 md:p-6">
+                <div className="flex items-center justify-between gap-4 mb-5">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Current Preview</p>
+                    <p className="text-sm">
+                      {preview ? (
+                        <>
+                          <span className="font-semibold text-foreground">{preview.keyword}</span>
+                          {' -> '}
+                          <span className="capitalize text-muted-foreground">{preview.mood}</span>
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">Generating a new artwork...</span>
+                      )}
+                    </p>
+                  </div>
+                  <Sparkles className="w-5 h-5 text-primary" />
                 </div>
-              </div>
-            </>
-          ) : preview && (
-            <>
-              <div className="text-center mb-4">
-                <p className="text-muted-foreground">
-                  <span className="font-semibold text-foreground">{preview.keyword}</span>
-                  {' → '}
-                  <span className="capitalize">{preview.mood}</span>
-                </p>
-              </div>
 
-              <div className="flex justify-center mb-6">
-                <div className="rounded-xl overflow-hidden border-2 border-primary ring-2 ring-primary/50">
-                  <div className="aspect-square w-80">
-                    <SvgArtCanvas 
-                      params={preview.artParams} 
-                    />
+                {loading ? (
+                  <div className="animate-pulse">
+                    <div className="aspect-square bg-secondary rounded-xl w-full max-w-[440px] mx-auto" />
+                  </div>
+                ) : (
+                  preview && (
+                    <div className="overflow-hidden w-full max-w-[440px] mx-auto transition-all">
+                      <div className="aspect-square w-full">
+                        <SvgArtCanvas params={preview.artParams} />
+                      </div>
+                    </div>
+                  )
+                )}
+
+                <div className="text-center mt-6">
+                  {savedId ? (
+                    <Button asChild>
+                      <Link href={`/art/${savedId}`}>View in Gallery</Link>
+                    </Button>
+                  ) : (
+                    <Button onClick={handleSave} disabled={saving || loading || !preview}>
+                      {saving ? 'Saving...' : 'Save to Gallery'}
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/60">
+              <CardContent className="p-5 md:p-6 space-y-5">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold tracking-tight">Generation Inspector</h3>
+                  <Activity className="w-5 h-5 text-muted-foreground" />
+                </div>
+
+                <div className="space-y-2">
+                  {GENERATION_STEPS.map((step, index) => {
+                    const status = getStepStatus(index, stepIndex, loading, Boolean(preview));
+                    const dotClass =
+                      status === 'done'
+                        ? 'bg-primary'
+                        : status === 'active'
+                          ? 'bg-primary/70 animate-pulse'
+                          : 'bg-muted';
+
+                    return (
+                      <div key={step.label} className="flex items-start gap-3">
+                        <span className={`mt-1 w-2.5 h-2.5 rounded-full ${dotClass}`} />
+                        <div>
+                          <p className="text-sm font-medium">{step.label}</p>
+                          <p className="text-xs text-muted-foreground">{step.description}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="rounded-lg border bg-card/50 p-3 space-y-2">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                    <Hash className="w-3.5 h-3.5" />
+                    Input & Identity
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <p className="text-muted-foreground">Keyword</p>
+                    <p className="text-right truncate">{preview?.keyword ?? '-'}</p>
+                    <p className="text-muted-foreground">Mood</p>
+                    <p className="text-right capitalize">{preview?.mood ?? '-'}</p>
+                    <p className="text-muted-foreground">Seed</p>
+                    <p className="text-right">{preview?.artParams.seed ?? '-'}</p>
                   </div>
                 </div>
-              </div>
 
-              <div className="text-center">
-                {savedId ? (
-                  <Button asChild size="sm">
-                    <Link href={`/art/${savedId}`}>View in Gallery</Link>
-                  </Button>
-                ) : (
-                  <Button onClick={handleSave} disabled={saving} size="sm">
-                    {saving ? 'Saving...' : 'Save to Gallery'}
-                  </Button>
-                )}
-              </div>
-            </>
-          )}
+                <div className="rounded-lg border bg-card/50 p-3 space-y-2">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                    <Layers3 className="w-3.5 h-3.5" />
+                    Composition
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <p className="text-muted-foreground">Shape Types</p>
+                    <p className="text-right">{preview?.artParams.shapeTypes.join(', ') ?? '-'}</p>
+                    <p className="text-muted-foreground">Complexity</p>
+                    <p className="text-right">{preview ? formatValue(preview.artParams.complexity) : '-'}</p>
+                    <p className="text-muted-foreground">Layers</p>
+                    <p className="text-right">{preview?.artParams.layerCount ?? '-'}</p>
+                    <p className="text-muted-foreground">Position Bias</p>
+                    <p className="text-right capitalize">{preview?.artParams.positionBias ?? '-'}</p>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border bg-card/50 p-3 space-y-2">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                    Dynamics
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <p className="text-muted-foreground">Motion Speed</p>
+                    <p className="text-right">{preview ? formatValue(preview.artParams.motionSpeed) : '-'}</p>
+                    <p className="text-muted-foreground">Chaos Level</p>
+                    <p className="text-right">{preview ? formatValue(preview.artParams.chaosLevel) : '-'}</p>
+                    <p className="text-muted-foreground">Rotation Var.</p>
+                    <p className="text-right">{preview ? formatValue(preview.artParams.rotationVariance) : '-'}</p>
+                    <p className="text-muted-foreground">Size Curve</p>
+                    <p className="text-right">{preview ? formatValue(preview.artParams.sizeCurve) : '-'}</p>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border bg-card/50 p-3 space-y-2">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                    <Palette className="w-3.5 h-3.5" />
+                    Styling
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-sm mb-2">
+                    <p className="text-muted-foreground">Stroke Width</p>
+                    <p className="text-right">{preview?.artParams.strokeWidth ?? '-'}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">Shape Colors</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(preview?.artParams.colors ?? []).map((color) => (
+                        <span
+                          key={color}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded border"
+                        >
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                          {color}
+                        </span>
+                      ))}
+                      {!preview && <span className="text-xs text-muted-foreground">-</span>}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">Background Colors</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(preview?.artParams.backgroundColors ?? []).map((color) => (
+                        <span
+                          key={color}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded border"
+                        >
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                          {color}
+                        </span>
+                      ))}
+                      {!preview && <span className="text-xs text-muted-foreground">-</span>}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </section>
       )}
 

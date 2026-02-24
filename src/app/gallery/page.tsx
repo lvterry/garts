@@ -52,7 +52,7 @@ export default function GalleryPage() {
       const response = await fetch(`/api/art/${id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete');
       setArtworks(artworks.filter((a) => a.id !== id));
-    } catch (err) {
+    } catch {
       alert('Failed to delete artwork');
     } finally {
       setDeletingId(null);

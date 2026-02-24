@@ -3,6 +3,10 @@ import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -48,10 +52,10 @@ export async function POST(request: NextRequest) {
       artData: JSON.parse(artwork.artData),
       createdAt: artwork.createdAt.toISOString(),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error saving art:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to save art' },
+      { error: getErrorMessage(error, 'Failed to save art') },
       { status: 500 }
     );
   }

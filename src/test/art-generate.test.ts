@@ -8,7 +8,7 @@ describe('POST /api/art/generate', () => {
 
   it('returns art preview data when given a valid keyword', async () => {
     const { createMoodAnalyzer } = await import('@/lib/ai');
-    const { generateArtParams, artParamsToJSON } = await import('@/lib/art-generator');
+    const { generateArtParams } = await import('@/lib/art-generator');
 
     const mockMoodAnalyzer = {
       extractMood: vi.fn().mockResolvedValue({ mood: 'serene' }),
@@ -18,13 +18,17 @@ describe('POST /api/art/generate', () => {
       seed: 123456,
       mood: 'serene',
       colors: ['#a8d8ea'],
+      backgroundColors: ['#112233'],
       shapeTypes: ['circles'],
       complexity: 3,
       motionSpeed: 2,
       chaosLevel: 2,
-      algorithm: 'mixed',
+      rotationVariance: 45,
+      sizeCurve: 0.5,
+      positionBias: 'center',
+      strokeWidth: 2,
+      layerCount: 1,
     });
-    (artParamsToJSON as ReturnType<typeof vi.fn>).mockReturnValue('{"seed":123456,"mood":"serene","colors":["#a8d8ea"],"shapeTypes":["circles"],"complexity":3,"motionSpeed":2,"chaosLevel":2}');
 
     const handler = (await import('@/app/api/art/generate/route')).POST;
 
@@ -40,11 +44,12 @@ describe('POST /api/art/generate', () => {
     const data = await response.json();
     expect(data).toHaveProperty('keyword', 'sunset');
     expect(data).toHaveProperty('mood', 'serene');
-    expect(data).toHaveProperty('mixed');
-    expect(data).toHaveProperty('single');
-    expect(data.mixed).toHaveProperty('seed');
-    expect(data.mixed).toHaveProperty('colors');
-    expect(data.mixed).toHaveProperty('shapeTypes');
+    expect(data).toHaveProperty('artParams');
+    expect(data.artParams).toHaveProperty('seed', 123456);
+    expect(data.artParams).toHaveProperty('colors');
+    expect(data.artParams).toHaveProperty('backgroundColors');
+    expect(data.artParams).toHaveProperty('shapeTypes');
+    expect(data.artParams).toHaveProperty('positionBias', 'center');
   });
 
   it('returns 400 when keyword is missing', async () => {

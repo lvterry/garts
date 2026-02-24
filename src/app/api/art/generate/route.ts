@@ -4,6 +4,10 @@ import { generateArtParams } from '@/lib/art-generator';
 
 export const dynamic = 'force-dynamic';
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -34,10 +38,10 @@ export async function POST(request: NextRequest) {
       mood: moodResult.mood,
       artParams,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error generating art:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to generate art' },
+      { error: getErrorMessage(error, 'Failed to generate art') },
       { status: 500 }
     );
   }
