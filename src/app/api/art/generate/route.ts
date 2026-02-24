@@ -31,12 +31,21 @@ export async function POST(request: NextRequest) {
     const analyzer = createMoodAnalyzer();
     const moodResult = await analyzer.extractMood(trimmedKeyword);
 
-    const artParams = generateArtParams(moodResult.mood, trimmedKeyword);
+    const artParams = generateArtParams(
+      moodResult.mood,
+      trimmedKeyword,
+      moodResult.semanticProfile
+    );
 
     return NextResponse.json({
       keyword: trimmedKeyword,
       mood: moodResult.mood,
       artParams,
+      debug: {
+        confidence: moodResult.confidence ?? null,
+        semanticProfile: moodResult.semanticProfile ?? null,
+        pipelinePath: moodResult.semanticProfile?.pipelinePath ?? 'direct-semantic',
+      },
     });
   } catch (error: unknown) {
     console.error('Error generating art:', error);

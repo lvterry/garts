@@ -17,4 +17,4 @@ export function createMoodAnalyzer(): MoodAnalyzer {
   }
 }
 
-export type { MoodAnalyzer, MoodResult } from './types';
+export type { MoodAnalyzer, MoodResult, SemanticProfile, Tempo } from './types';

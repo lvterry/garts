@@ -1,3 +1,86 @@
+# Semantic Variation Upgrade Plan (2026-02-24)
+
+## Goal
+Increase output variation by moving from single-label mood mapping to semantic feature extraction that captures user intent, imagery, and style cues.
+
+## Requirements
+- Keep existing API behavior working (`keyword`, `mood`, `artParams`) while adding optional metadata.
+- Preserve deterministic behavior where needed (same input can still be reproducible with seed).
+- Avoid prompt bloat and high latency from multi-step LLM chains on every request.
+- Make variation measurable with clear metrics before and after.
+
+## Scope
+- In:
+  - `src/lib/ai/types.ts` (`MoodResult` extension to semantic profile).
+  - `src/lib/ai/providers/*.ts` (new structured extraction prompt).
+  - `src/app/api/art/generate/route.ts` (semantic-aware generation flow).
+  - `src/lib/art-generator/index.ts` (map semantic profile into params).
+  - `src/test/*` (contract + behavior tests).
+- Out:
+  - Full model fine-tuning.
+  - Database schema changes unless required for analytics.
+
+## Strategy (Recommended)
+1. Replace single mood classification with a compact semantic profile:
+   - `coreMood` (compatible with old mood buckets),
+   - `energy` (0-1),
+   - `valence` (-1 to 1),
+   - `imageryTags` (e.g. ocean, dusk, city, forest),
+   - `styleHints` (e.g. minimal, abstract, geometric, organic),
+   - `tempo` (calm/medium/fast).
+2. Use profile -> generator mapping as the primary driver for variation, with mood only as a fallback prior.
+3. Add a lightweight optional expansion step only for sparse inputs (1-2 words), not for all inputs:
+   - Expand to short scene description (1-2 lines), then re-extract profile.
+4. Add controlled randomness knobs (`temperature-like` variation scalar) inside generator mapping rather than relying on unstable LLM wording.
+
+## Alternative (Optional A/B)
+1. Poetry-first pipeline:
+   - keyword -> short poem -> key info extraction -> params.
+2. Use this only as an experiment arm because it increases latency and can drift semantically.
+
+## Action Items
+- [x] Define `SemanticProfile` TS type and backward-compatible API response contract.
+- [x] Design a JSON-only extraction prompt for providers to return stable structured fields.
+- [x] Implement strict validation/sanitization with defaults when model output is missing fields.
+- [x] Refactor `generateArtParams` to consume `SemanticProfile` and blend with existing mood ranges.
+- [x] Add sparse-input expansion gate (`keyword.length`/token count threshold) and benchmark latency impact.
+- [x] Add A/B switch (`direct-semantic` vs `expand-then-extract`) via env flag for experimentation.
+- [x] Add tests: parser robustness, mapping determinism, and variation-delta regression checks.
+- [x] Add observability metadata in response (`debug.semanticProfile`, `debug.pipelinePath`).
+- [x] Run `npm run test` and targeted manual prompts to verify higher semantic fidelity and diversity.
+
+## Testing and Validation
+- Functional:
+  - Same keyword with different semantic cues should produce clearly different palettes/composition.
+  - Semantically close phrases should preserve thematic consistency.
+- Quantitative:
+  - Track pairwise parameter distance across a fixed prompt set before/after.
+  - Track API latency P50/P95 with and without expansion gate.
+- Robustness:
+  - Empty/noisy inputs should fall back gracefully to neutral defaults.
+  - Non-English keywords should not break schema parsing.
+
+## Risks and Edge Cases
+- Over-expansion may hallucinate details and reduce user-control fidelity.
+- Too many semantic dimensions can produce unstable visuals unless weighted carefully.
+- Provider output format drift requires strict schema guardrails.
+- Randomness can mask semantic gains if not bounded.
+
+## Review
+- Status: Implemented.
+- Core delivery:
+  - Added semantic schema in AI layer (`semanticProfile`: `coreMood`, `energy`, `valence`, `tempo`, `imageryTags`, `styleHints`, optional `expandedPrompt`, `pipelinePath`).
+  - Updated OpenAI/Kimi/Claude providers to use a shared structured prompt + parser with strict fallback sanitization.
+  - Added pipeline strategy switch via env: `SEMANTIC_PIPELINE_MODE=auto|direct|expand`.
+  - Refactored generator to consume semantic profile and influence color, shape weighting, motion, chaos, and rotation.
+  - Extended `/api/art/generate` response with additive `debug` payload for observability.
+- Tests and checks:
+  - `npm run test`: pass (12/12).
+  - `npm run lint`: pass with one existing non-blocking warning in `src/app/layout.tsx` (font loading rule).
+  - `npx tsc --noEmit`: pass.
+- Notes:
+  - Poetry-first expansion remains an optional future A/B arm; not enabled by default in this implementation.
+
 # Homepage Generation Form Debug Plan
 
 ## Goal

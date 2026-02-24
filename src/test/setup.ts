@@ -25,10 +25,16 @@ vi.mock('@/lib/art-generator', () => ({
     seed: 123456,
     mood: 'serene',
     colors: ['#a8d8ea', '#aa96da', '#fcbad3', '#ffffd2'],
-    shapeType: 'circles',
+    backgroundColors: ['#112233'],
+    shapeTypes: ['circles'],
     complexity: 3,
     motionSpeed: 2,
     chaosLevel: 2,
+    rotationVariance: 45,
+    sizeCurve: 0.5,
+    positionBias: 'center',
+    strokeWidth: 2,
+    layerCount: 1,
   }),
   artParamsToJSON: vi.fn().mockReturnValue(
     '{"seed":123456,"mood":"serene","colors":["#a8d8ea","#aa96da","#fcbad3","#ffffd2"],"shapeType":"circles","complexity":3,"motionSpeed":2,"chaosLevel":2}'

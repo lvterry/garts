@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { MoodAnalyzer, MoodResult } from '../types';
+import { buildPrompt, choosePipelinePath, parseModelSemanticResponse } from '../semantic';
 
 export class OpenAIMoodAnalyzer implements MoodAnalyzer {
   private client: OpenAI;
@@ -11,40 +12,28 @@ export class OpenAIMoodAnalyzer implements MoodAnalyzer {
   }
 
   async extractMood(keyword: string): Promise<MoodResult> {
+    const pipelinePath = choosePipelinePath(keyword);
+
     const completion = await this.client.chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
           role: 'system',
-          content:
-            'You are an art mood analyzer. Analyze the keyword and return a mood descriptor. Return ONLY a single mood word from these options: serene, chaotic, joyful, melancholic, energetic, mysterious, peaceful, intense. Nothing else.',
+          content: 'You are a strict JSON API that returns art semantic analysis.',
         },
         {
           role: 'user',
-          content: `Keyword: "${keyword}"`,
+          content: buildPrompt(keyword, pipelinePath),
         },
       ],
     });
 
-    const mood = completion.choices[0]?.message?.content?.trim().toLowerCase() || 'neutral';
+    const content = completion.choices[0]?.message?.content;
+    const parsed = parseModelSemanticResponse(content, keyword, pipelinePath);
 
     return {
-      mood: this.validateMood(mood),
+      ...parsed,
       rawResponse: completion,
     };
-  }
-
-  private validateMood(mood: string): string {
-    const validMoods = [
-      'serene',
-      'chaotic',
-      'joyful',
-      'melancholic',
-      'energetic',
-      'mysterious',
-      'peaceful',
-      'intense',
-    ];
-    return validMoods.includes(mood) ? mood : 'neutral';
   }
 }

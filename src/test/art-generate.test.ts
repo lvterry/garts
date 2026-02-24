@@ -11,7 +11,19 @@ describe('POST /api/art/generate', () => {
     const { generateArtParams } = await import('@/lib/art-generator');
 
     const mockMoodAnalyzer = {
-      extractMood: vi.fn().mockResolvedValue({ mood: 'serene' }),
+      extractMood: vi.fn().mockResolvedValue({
+        mood: 'serene',
+        confidence: 0.88,
+        semanticProfile: {
+          coreMood: 'serene',
+          energy: 0.3,
+          valence: 0.4,
+          tempo: 'calm',
+          imageryTags: ['sunset', 'horizon'],
+          styleHints: ['minimal'],
+          pipelinePath: 'direct-semantic',
+        },
+      }),
     };
     (createMoodAnalyzer as ReturnType<typeof vi.fn>).mockReturnValue(mockMoodAnalyzer);
     (generateArtParams as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -45,6 +57,10 @@ describe('POST /api/art/generate', () => {
     expect(data).toHaveProperty('keyword', 'sunset');
     expect(data).toHaveProperty('mood', 'serene');
     expect(data).toHaveProperty('artParams');
+    expect(data).toHaveProperty('debug');
+    expect(data.debug).toHaveProperty('confidence', 0.88);
+    expect(data.debug).toHaveProperty('pipelinePath', 'direct-semantic');
+    expect(data.debug).toHaveProperty('semanticProfile');
     expect(data.artParams).toHaveProperty('seed', 123456);
     expect(data.artParams).toHaveProperty('colors');
     expect(data.artParams).toHaveProperty('backgroundColors');
