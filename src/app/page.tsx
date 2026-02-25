@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {
   Activity,
+  CheckCircle2,
   Hash,
   Layers3,
   Palette,
@@ -29,6 +30,13 @@ const SvgArtCanvas = dynamic(() => import('@/components/SvgArtCanvas'), {
 interface PreviewData {
   keyword: string;
   mood: string;
+  artParams: ArtParams;
+  options?: PreviewOption[];
+}
+
+interface PreviewOption {
+  optionId: string;
+  label: string;
   artParams: ArtParams;
 }
 
@@ -61,7 +69,7 @@ async function generateArt(keyword: string): Promise<PreviewData> {
   const response = await fetch('/api/art/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ keyword }),
+    body: JSON.stringify({ keyword, optionCount: 2 }),
   });
 
   if (!response.ok) {
@@ -71,7 +79,7 @@ async function generateArt(keyword: string): Promise<PreviewData> {
   return response.json();
 }
 
-async function saveArt(data: PreviewData) {
+async function saveArt(data: { keyword: string; mood: string; artParams: ArtParams }) {
   const response = await fetch('/api/art/save', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -88,6 +96,24 @@ async function saveArt(data: PreviewData) {
   }
 
   return response.json();
+}
+
+function getPreviewOptions(preview: PreviewData | null): PreviewOption[] {
+  if (!preview) {
+    return [];
+  }
+
+  if (Array.isArray(preview.options) && preview.options.length > 0) {
+    return preview.options;
+  }
+
+  return [
+    {
+      optionId: `${preview.artParams.seed}-0`,
+      label: 'Option A',
+      artParams: preview.artParams,
+    },
+  ];
 }
 
 function formatValue(value: number): string {
@@ -121,6 +147,7 @@ export default function Home() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState<PreviewData | null>(null);
+  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [artworks, setArtworks] = useState<ArtworkData[]>([]);
   const [galleryLoading, setGalleryLoading] = useState(true);
@@ -162,11 +189,14 @@ export default function Home() {
     setLoading(true);
     setError('');
     setPreview(null);
+    setSelectedOptionId(null);
     setSavedId(null);
 
     try {
       const art = await generateArt(keyword.trim());
       setPreview(art);
+      const options = getPreviewOptions(art);
+      setSelectedOptionId(options[0]?.optionId ?? null);
       setKeyword('');
     } catch {
       setError('Failed to generate art. Please try again.');
@@ -178,9 +208,17 @@ export default function Home() {
   const handleSave = async () => {
     if (!preview) return;
 
+    const options = getPreviewOptions(preview);
+    const activeOption = options.find((option) => option.optionId === selectedOptionId) ?? options[0];
+    if (!activeOption) return;
+
     setSaving(true);
     try {
-      const result = await saveArt(preview);
+      const result = await saveArt({
+        keyword: preview.keyword,
+        mood: preview.mood,
+        artParams: activeOption.artParams,
+      });
       setSavedId(result.id);
       const response = await fetch('/api/art?limit=6');
       const data = await response.json();
@@ -202,6 +240,9 @@ export default function Home() {
       alert('Failed to delete artwork');
     }
   };
+
+  const options = getPreviewOptions(preview);
+  const activeOption = options.find((option) => option.optionId === selectedOptionId) ?? options[0] ?? null;
 
   return (
     <div>
@@ -239,7 +280,7 @@ export default function Home() {
               <CardContent className="p-5 md:p-6">
                 <div className="flex items-center justify-between gap-4 mb-5">
                   <div>
-                    <p className="text-sm text-muted-foreground">Current Preview</p>
+                    <p className="text-sm text-muted-foreground">Compare Options</p>
                     <p className="text-sm">
                       {preview ? (
                         <>
@@ -251,20 +292,46 @@ export default function Home() {
                         <span className="text-muted-foreground">Generating a new artwork...</span>
                       )}
                     </p>
+                    {activeOption && (
+                      <p className="text-xs text-muted-foreground mt-1">Selected: {activeOption.label}</p>
+                    )}
                   </div>
                   <Sparkles className="w-5 h-5 text-primary" />
                 </div>
 
                 {loading ? (
-                  <div className="animate-pulse">
-                    <div className="aspect-square bg-secondary rounded-xl w-full max-w-[440px] mx-auto" />
+                  <div className="grid gap-3 sm:grid-cols-2 animate-pulse">
+                    <div className="aspect-square bg-secondary rounded-xl w-full" />
+                    <div className="aspect-square bg-secondary rounded-xl w-full" />
                   </div>
                 ) : (
                   preview && (
-                    <div className="overflow-hidden w-full max-w-[440px] mx-auto transition-all">
-                      <div className="aspect-square w-full">
-                        <SvgArtCanvas params={preview.artParams} />
-                      </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {options.map((option) => {
+                        const isSelected = option.optionId === selectedOptionId;
+
+                        return (
+                          <button
+                            key={option.optionId}
+                            type="button"
+                            aria-pressed={isSelected}
+                            onClick={() => setSelectedOptionId(option.optionId)}
+                            className={`text-left rounded-xl border overflow-hidden transition-all ${
+                              isSelected
+                                ? 'border-primary shadow-[0_0_0_2px_hsl(var(--primary)/0.18)]'
+                                : 'border-border hover:border-primary/40'
+                            }`}
+                          >
+                            <div className="aspect-square w-full">
+                              <SvgArtCanvas params={option.artParams} />
+                            </div>
+                            <div className="px-3 py-2 border-t bg-card/80 flex items-center justify-between">
+                              <span className="text-xs font-medium">{option.label}</span>
+                              {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-primary" />}
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   )
                 )}
@@ -275,7 +342,7 @@ export default function Home() {
                       <Link href={`/art/${savedId}`}>View in Gallery</Link>
                     </Button>
                   ) : (
-                    <Button onClick={handleSave} disabled={saving || loading || !preview}>
+                    <Button onClick={handleSave} disabled={saving || loading || !activeOption}>
                       {saving ? 'Saving...' : 'Save to Gallery'}
                     </Button>
                   )}
@@ -322,8 +389,10 @@ export default function Home() {
                     <p className="text-right truncate">{preview?.keyword ?? '-'}</p>
                     <p className="text-muted-foreground">Mood</p>
                     <p className="text-right capitalize">{preview?.mood ?? '-'}</p>
+                    <p className="text-muted-foreground">Option</p>
+                    <p className="text-right">{activeOption?.label ?? '-'}</p>
                     <p className="text-muted-foreground">Seed</p>
-                    <p className="text-right">{preview?.artParams.seed ?? '-'}</p>
+                    <p className="text-right">{activeOption?.artParams.seed ?? '-'}</p>
                   </div>
                 </div>
 
@@ -334,13 +403,13 @@ export default function Home() {
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <p className="text-muted-foreground">Shape Types</p>
-                    <p className="text-right">{preview?.artParams.shapeTypes.join(', ') ?? '-'}</p>
+                    <p className="text-right">{activeOption?.artParams.shapeTypes.join(', ') ?? '-'}</p>
                     <p className="text-muted-foreground">Complexity</p>
-                    <p className="text-right">{preview ? formatValue(preview.artParams.complexity) : '-'}</p>
+                    <p className="text-right">{activeOption ? formatValue(activeOption.artParams.complexity) : '-'}</p>
                     <p className="text-muted-foreground">Layers</p>
-                    <p className="text-right">{preview?.artParams.layerCount ?? '-'}</p>
+                    <p className="text-right">{activeOption?.artParams.layerCount ?? '-'}</p>
                     <p className="text-muted-foreground">Position Bias</p>
-                    <p className="text-right capitalize">{preview?.artParams.positionBias ?? '-'}</p>
+                    <p className="text-right capitalize">{activeOption?.artParams.positionBias ?? '-'}</p>
                   </div>
                 </div>
 
@@ -351,13 +420,13 @@ export default function Home() {
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <p className="text-muted-foreground">Motion Speed</p>
-                    <p className="text-right">{preview ? formatValue(preview.artParams.motionSpeed) : '-'}</p>
+                    <p className="text-right">{activeOption ? formatValue(activeOption.artParams.motionSpeed) : '-'}</p>
                     <p className="text-muted-foreground">Chaos Level</p>
-                    <p className="text-right">{preview ? formatValue(preview.artParams.chaosLevel) : '-'}</p>
+                    <p className="text-right">{activeOption ? formatValue(activeOption.artParams.chaosLevel) : '-'}</p>
                     <p className="text-muted-foreground">Rotation Var.</p>
-                    <p className="text-right">{preview ? formatValue(preview.artParams.rotationVariance) : '-'}</p>
+                    <p className="text-right">{activeOption ? formatValue(activeOption.artParams.rotationVariance) : '-'}</p>
                     <p className="text-muted-foreground">Size Curve</p>
-                    <p className="text-right">{preview ? formatValue(preview.artParams.sizeCurve) : '-'}</p>
+                    <p className="text-right">{activeOption ? formatValue(activeOption.artParams.sizeCurve) : '-'}</p>
                   </div>
                 </div>
 
@@ -368,12 +437,12 @@ export default function Home() {
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-sm mb-2">
                     <p className="text-muted-foreground">Stroke Width</p>
-                    <p className="text-right">{preview?.artParams.strokeWidth ?? '-'}</p>
+                    <p className="text-right">{activeOption?.artParams.strokeWidth ?? '-'}</p>
                   </div>
                   <div className="space-y-2">
                     <p className="text-xs text-muted-foreground">Shape Colors</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {(preview?.artParams.colors ?? []).map((color) => (
+                      {(activeOption?.artParams.colors ?? []).map((color) => (
                         <span
                           key={color}
                           className="inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded border"
@@ -382,13 +451,13 @@ export default function Home() {
                           {color}
                         </span>
                       ))}
-                      {!preview && <span className="text-xs text-muted-foreground">-</span>}
+                      {!activeOption && <span className="text-xs text-muted-foreground">-</span>}
                     </div>
                   </div>
                   <div className="space-y-2">
                     <p className="text-xs text-muted-foreground">Background Colors</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {(preview?.artParams.backgroundColors ?? []).map((color) => (
+                      {(activeOption?.artParams.backgroundColors ?? []).map((color) => (
                         <span
                           key={color}
                           className="inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded border"
@@ -397,7 +466,7 @@ export default function Home() {
                           {color}
                         </span>
                       ))}
-                      {!preview && <span className="text-xs text-muted-foreground">-</span>}
+                      {!activeOption && <span className="text-xs text-muted-foreground">-</span>}
                     </div>
                   </div>
                 </div>

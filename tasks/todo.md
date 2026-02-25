@@ -172,3 +172,29 @@ Improve the home page generation experience for debugging by switching to a left
     - Updated `src/test/art-generate.test.ts` to assert current `/api/art/generate` response contract (`artParams`).
     - Cleared existing lint errors across touched files; `npm run lint` now exits successfully (1 non-blocking warning in `src/app/layout.tsx` about font loading strategy).
     - `npm run test` now passes (7/7).
+
+# Dual Option Artwork Plan (2026-02-25)
+
+## Goal
+Support side-by-side artwork comparison by generating two options per request, allowing users to select one and inspect/save the selected option.
+
+## Action Items
+- [x] Extend `/api/art/generate` request/response contract with `optionCount` and `options` while keeping `artParams` backward compatible.
+- [x] Refactor home page preview state to support selectable options and selected option tracking.
+- [x] Implement compare UI (Option A/B), selection affordance, and right-panel inspector binding to selected option.
+- [x] Ensure save flow persists only the selected option.
+- [x] Update API tests to validate default single-option behavior and explicit two-option behavior.
+- [x] Run verification commands and record results in review.
+
+## Review
+- Status: Implemented
+- Files changed:
+  - `src/app/api/art/generate/route.ts`
+  - `src/app/page.tsx`
+  - `src/test/art-generate.test.ts`
+  - `tasks/dual-option-artwork-plan.md`
+  - `tasks/todo.md`
+- Validation:
+  - `npm run test`: pass (13/13)
+  - `npx tsc --noEmit`: pass
+  - `npm run lint`: pass with one existing warning in `src/app/layout.tsx` (`@next/next/no-page-custom-font`)

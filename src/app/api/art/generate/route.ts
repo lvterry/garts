@@ -11,7 +11,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { keyword } = body;
+    const { keyword, optionCount } = body;
 
     if (!keyword || typeof keyword !== 'string') {
       return NextResponse.json(
@@ -31,16 +31,28 @@ export async function POST(request: NextRequest) {
     const analyzer = createMoodAnalyzer();
     const moodResult = await analyzer.extractMood(trimmedKeyword);
 
-    const artParams = generateArtParams(
-      moodResult.mood,
-      trimmedKeyword,
-      moodResult.semanticProfile
-    );
+    const requestedCount = typeof optionCount === 'number' ? optionCount : 1;
+    const safeOptionCount = Math.min(4, Math.max(1, Math.floor(requestedCount)));
+
+    const options = Array.from({ length: safeOptionCount }, (_, index) => {
+      const generatedParams = generateArtParams(
+        moodResult.mood,
+        trimmedKeyword,
+        moodResult.semanticProfile
+      );
+
+      return {
+        optionId: `${generatedParams.seed}-${index}`,
+        label: `Option ${String.fromCharCode(65 + index)}`,
+        artParams: generatedParams,
+      };
+    });
 
     return NextResponse.json({
       keyword: trimmedKeyword,
       mood: moodResult.mood,
-      artParams,
+      artParams: options[0].artParams,
+      options,
       debug: {
         confidence: moodResult.confidence ?? null,
         semanticProfile: moodResult.semanticProfile ?? null,
