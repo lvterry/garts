@@ -32,7 +32,7 @@ describe('POST /api/art/generate', () => {
       mood: 'serene',
       colors: ['#a8d8ea'],
       backgroundColors: ['#112233'],
-      shapeTypes: ['circles'],
+      shapeTypes: ['curves'],
       complexity: 3,
       motionSpeed: 2,
       chaosLevel: 2,
@@ -71,6 +71,7 @@ describe('POST /api/art/generate', () => {
     expect(data.artParams).toHaveProperty('colors');
     expect(data.artParams).toHaveProperty('backgroundColors');
     expect(data.artParams).toHaveProperty('shapeTypes');
+    expect(data.artParams.shapeTypes).toContain('curves');
     expect(data.artParams).toHaveProperty('positionBias', 'center');
   });
 
@@ -235,6 +236,7 @@ describe('POST /api/art/generate', () => {
       });
     (computeOptionDistance as ReturnType<typeof vi.fn>)
       .mockReturnValueOnce(0.12)
+      .mockReturnValueOnce(0.48)
       .mockReturnValueOnce(0.48);
     (summarizeVariation as ReturnType<typeof vi.fn>).mockReturnValue('recovered with stronger variation');
 
@@ -253,6 +255,122 @@ describe('POST /api/art/generate', () => {
     expect((generateArtParams as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(3);
     expect(data.options[1].artParams.seed).toBe(333333);
     expect(data.options[1]).toHaveProperty('meta.optionDistance', 0.48);
+  });
+
+  it('caps variation retries to avoid unbounded regeneration', async () => {
+    const { createMoodAnalyzer } = await import('@/lib/ai');
+    const { computeOptionDistance, generateArtParams, summarizeVariation } = await import('@/lib/art-generator');
+
+    const mockMoodAnalyzer = {
+      extractMood: vi.fn().mockResolvedValue({
+        mood: 'serene',
+        confidence: 0.88,
+        semanticProfile: {
+          coreMood: 'serene',
+          energy: 0.3,
+          valence: 0.4,
+          tempo: 'calm',
+          imageryTags: ['sunset', 'horizon'],
+          styleHints: ['minimal'],
+          pipelinePath: 'direct-semantic',
+        },
+      }),
+    };
+    (createMoodAnalyzer as ReturnType<typeof vi.fn>).mockReturnValue(mockMoodAnalyzer);
+
+    (generateArtParams as ReturnType<typeof vi.fn>)
+      .mockReturnValueOnce({
+        seed: 111111,
+        mood: 'serene',
+        colors: ['#a8d8ea'],
+        backgroundColors: ['#112233'],
+        shapeTypes: ['circles'],
+        complexity: 3,
+        motionSpeed: 2,
+        chaosLevel: 2,
+        rotationVariance: 45,
+        sizeCurve: 0.5,
+        positionBias: 'center',
+        strokeWidth: 2,
+        layerCount: 1,
+      })
+      .mockReturnValueOnce({
+        seed: 222222,
+        mood: 'serene',
+        colors: ['#a8d8ea'],
+        backgroundColors: ['#112233'],
+        shapeTypes: ['circles'],
+        complexity: 3,
+        motionSpeed: 2,
+        chaosLevel: 2,
+        rotationVariance: 45,
+        sizeCurve: 0.5,
+        positionBias: 'center',
+        strokeWidth: 2,
+        layerCount: 1,
+      })
+      .mockReturnValueOnce({
+        seed: 333333,
+        mood: 'serene',
+        colors: ['#a8d8ea'],
+        backgroundColors: ['#112233'],
+        shapeTypes: ['circles'],
+        complexity: 3,
+        motionSpeed: 2,
+        chaosLevel: 2,
+        rotationVariance: 45,
+        sizeCurve: 0.5,
+        positionBias: 'center',
+        strokeWidth: 2,
+        layerCount: 1,
+      })
+      .mockReturnValueOnce({
+        seed: 444444,
+        mood: 'serene',
+        colors: ['#a8d8ea'],
+        backgroundColors: ['#112233'],
+        shapeTypes: ['circles'],
+        complexity: 3,
+        motionSpeed: 2,
+        chaosLevel: 2,
+        rotationVariance: 45,
+        sizeCurve: 0.5,
+        positionBias: 'center',
+        strokeWidth: 2,
+        layerCount: 1,
+      })
+      .mockReturnValueOnce({
+        seed: 555555,
+        mood: 'serene',
+        colors: ['#a8d8ea'],
+        backgroundColors: ['#112233'],
+        shapeTypes: ['circles'],
+        complexity: 3,
+        motionSpeed: 2,
+        chaosLevel: 2,
+        rotationVariance: 45,
+        sizeCurve: 0.5,
+        positionBias: 'center',
+        strokeWidth: 2,
+        layerCount: 1,
+      });
+    (computeOptionDistance as ReturnType<typeof vi.fn>).mockReturnValue(0.12);
+    (summarizeVariation as ReturnType<typeof vi.fn>).mockReturnValue('distance remained below threshold');
+
+    const handler = (await import('@/app/api/art/generate/route')).POST;
+    const request = new NextRequest('http://localhost/api/art/generate', {
+      method: 'POST',
+      body: JSON.stringify({ keyword: 'sunset', optionCount: 2 }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const response = await handler(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.options).toHaveLength(2);
+    expect((generateArtParams as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(5);
+    expect(data.options[1].artParams.seed).toBe(555555);
   });
 
   it('returns 400 when keyword is missing', async () => {

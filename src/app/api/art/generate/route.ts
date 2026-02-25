@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 const MIN_OPTION_DISTANCE = 0.28;
 const STRENGTH_PRESETS = [0.25, 0.55, 0.75, 0.9];
 const RETRY_STRENGTH_BOOST = 0.25;
+const MAX_VARIATION_RETRIES = 3;
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -50,6 +51,7 @@ export async function POST(request: NextRequest) {
 
     for (let index = 0; index < safeOptionCount; index++) {
       const defaultStrength = STRENGTH_PRESETS[Math.min(index, STRENGTH_PRESETS.length - 1)];
+      let strength = defaultStrength;
       let generatedParams = generateArtParams(
         moodResult.mood,
         trimmedKeyword,
@@ -60,14 +62,17 @@ export async function POST(request: NextRequest) {
               optionCount: safeOptionCount,
               baseSeed,
               mode: 'compare-controlled',
-              strength: defaultStrength,
+              strength,
             }
           : undefined
       );
 
       if (safeOptionCount > 1 && index > 0 && options[0]) {
-        const distance = computeOptionDistance(options[0].artParams, generatedParams);
-        if (distance < MIN_OPTION_DISTANCE) {
+        let distance = computeOptionDistance(options[0].artParams, generatedParams);
+        let retries = 0;
+
+        while (distance < MIN_OPTION_DISTANCE && retries < MAX_VARIATION_RETRIES) {
+          strength = Math.min(1, strength + RETRY_STRENGTH_BOOST);
           generatedParams = generateArtParams(
             moodResult.mood,
             trimmedKeyword,
@@ -77,9 +82,11 @@ export async function POST(request: NextRequest) {
               optionCount: safeOptionCount,
               baseSeed,
               mode: 'compare-controlled',
-              strength: Math.min(1, defaultStrength + RETRY_STRENGTH_BOOST),
+              strength,
             }
           );
+          distance = computeOptionDistance(options[0].artParams, generatedParams);
+          retries += 1;
         }
       }
 

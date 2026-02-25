@@ -1,48 +1,58 @@
-# Garts - Agent Instructions
+## Workflow Orchestration
 
-## Project Overview
-- **Project**: Garts - Generative Art Gallery
-- **Tech Stack**: Next.js 14 (App Router), Turso/libSQL, Prisma, p5.js, AI (Kimi/OpenAI/Claude)
-- **Repository**: https://github.com/lvterry/garts
+### 1. Plan Node Default
+- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
+- If something goes sideways, STOP and re-plan immediately - don't keep pushing
+- Use plan mode for verification steps, not just building
+- Write detailed specs upfront to reduce ambiguity
 
-## Commands
+### 2. Subagent Strategy
+- Use subagents liberally to keep main context window clean
+- Offload research, exploration, and parallel analysis to subagents
+- For complex problems, throw more compute at it via subagents
+- One tack per subagent for focused execution
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Production build |
-| `npm run lint` | Run ESLint |
-| `npm run test` | Run vitest tests |
+### 3. Self-Improvement Loop
+- After ANY correction from the user: update `tasks/lessons.md` with the pattern
+- Write rules for yourself that prevent the same mistake
+- Ruthlessly iterate on these lessons until mistake rate drops
+- Review lessons at session start for relevant project
 
-## Code Conventions
+### 4. Verification Before Done
+- Never mark a task complete without proving it works
+- Diff behavior between main and your changes when relevant
+- Ask yourself: "Would a staff engineer approve this?"
+- Run tests, check logs, demonstrate correctness
 
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS with `tailwind-merge` and `clsx`
-- **Testing**: Vitest with `vitest.run`
-- **Imports**: Use `@/` alias for `src/` (e.g., `@/lib/art-generator`)
-- **Components**: React Server Components by default, `"use client"` for interactivity
-- **API**: Next.js Route Handlers in `src/app/api/`
+### 5. Demand Elegance (Balanced)
+- For non-trivial changes: pause and ask "is there a more elegant way?"
+- If a fix feels hacky: "Knowing everything I know now, implement the elegant solution"
+- Skip this for simple, obvious fixes - don't over-engineer
+- Challenge your own work before presenting it
 
-## Key Files
+### 6. Autonomous Bug Fixing
+- When given a bug report: just fix it. Don't ask for hand-holding
+- Point at logs, errors, failing tests - then resolve them
+- Zero context switching required from the user
+- Go fix failing CI tests without being told how
 
-| Path | Purpose |
-|------|---------|
-| `src/lib/art-generator/index.ts` | Core art generation logic (colors, shapes, moods) |
-| `src/lib/ai/` | AI provider abstraction (Kimi, OpenAI, Claude) |
-| `src/components/SvgArtCanvas.tsx` | SVG-based art renderer |
-| `src/app/api/art/generate/route.ts` | Art generation API endpoint |
+## Task Management
 
-## Environment Variables
+1. **Plan First**: Write plan to `tasks/todo.md` with checkable items
+2. **Verify Plan**: Check in before starting implementation
+3. **Track Progress**: Mark items complete as you go
+4. **Explain Changes**: High-level summary at each step
+5. **Document Results**: Add review section to `tasks/todo.md`
+6. **Capture Lessons**: Update `tasks/lessons.md` after corrections
 
-```env
-DATABASE_URL="libsql://..."
-AI_PROVIDER="kimi"  # or "openai", "claude"
-KIMI_API_KEY="..."
-```
+## Core Principles
 
-## Important Notes
+- **Simplicity First**: Make every change as simple as possible. Impact minimal code.
+- **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
+- **Minimat Impact**: Changes should only touch what's necessary. Avoid introducing bugs.
 
-- Always run `npm run build` and `npm run test` before committing
-- Art generation supports two algorithms: `'single'` (1 shape type) and `'mixed'` (1-3 shape types)
-- Colors use HSL format with lightness ranges defined per mood in `moodToParams`
-- Prisma client auto-generates on `npm install` (postinstall hook)
+
+## Project Principles
+1. 使用最新版的 Next.js, shadcn/ui components, tailwindcss 来开发前端
+2. 使用 lucide icons 里的图标
+3. 设计风格简洁、直观 with subtle animations
