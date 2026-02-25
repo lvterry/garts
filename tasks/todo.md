@@ -337,3 +337,48 @@ Expand canonical moods from 9 to 15 to increase variation while preserving stric
   - `tasks/todo.md`
 - Validation:
   - `npm run test`: pass (26/26)
+
+# Classic Algorithm Generation Upgrade (2026-02-25)
+
+## Goal
+Improve generation quality with curated palettes, noise-driven placement, and classic algorithmic renderers while preserving existing API/save compatibility.
+
+## Action Items
+- [x] Add curated palette catalog inspired by Coolors/Chromotome/GenerativePalettes.
+- [x] Replace procedural HSL palette generation with deterministic curated palette selection.
+- [x] Add deterministic 2D noise/fBm utility module for generator-side field params.
+- [x] Extend `ArtParams` with additive algorithm/palette/noise/config fields.
+- [x] Add deterministic algorithm selection by mood/semantic profile, including controlled variation behavior.
+- [x] Add SVG algorithm renderer modules for:
+  - [x] Flow field + particles
+  - [x] Voronoi + gradients
+  - [x] Delaunay + depth blur
+  - [x] Particles + attractors
+- [x] Refactor `SvgArtCanvas` into algorithm dispatcher with legacy fallback mode.
+- [x] Update `/api/art/generate` debug payload with algorithm selection metadata.
+- [x] Update homepage inspector to display algorithm/palette/noise diagnostics.
+- [x] Add tests to validate curated palette + algorithm + noise assignment behavior.
+- [x] Run full verification (`npm test`, `npx tsc --noEmit`, `npm run lint`).
+
+## Review
+- Status: Implemented
+- Files changed:
+  - `src/lib/art-generator/index.ts`
+  - `src/lib/art-generator/palettes.ts`
+  - `src/lib/art-generator/noise.ts`
+  - `src/components/SvgArtCanvas.tsx`
+  - `src/components/renderers/types.ts`
+  - `src/components/renderers/utils.ts`
+  - `src/components/renderers/flowFieldParticles.tsx`
+  - `src/components/renderers/voronoiGradients.tsx`
+  - `src/components/renderers/delaunayDepthBlur.tsx`
+  - `src/components/renderers/particlesAttractors.tsx`
+  - `src/app/api/art/generate/route.ts`
+  - `src/app/page.tsx`
+  - `src/test/art-generator-variation.test.ts`
+  - `package.json`
+  - `package-lock.json`
+- Validation:
+  - `npm test`: pass (27/27)
+  - `npx tsc --noEmit`: pass
+  - `npm run lint`: pass with one existing warning in `src/app/layout.tsx` (`@next/next/no-page-custom-font`)

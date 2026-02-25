@@ -397,6 +397,10 @@ export default function Home() {
                     <p className="text-right">{activeOption?.label ?? '-'}</p>
                     <p className="text-muted-foreground">Seed</p>
                     <p className="text-right">{activeOption?.artParams.seed ?? '-'}</p>
+                    <p className="text-muted-foreground">Algorithm</p>
+                    <p className="text-right text-xs leading-5">{activeOption?.artParams.renderAlgorithm ?? 'legacy-shapes'}</p>
+                    <p className="text-muted-foreground">Palette</p>
+                    <p className="text-right text-xs leading-5">{activeOption?.artParams.paletteId ?? '-'}</p>
                     <p className="text-muted-foreground">Variation</p>
                     <p className="text-right text-xs leading-5">{activeOption?.meta?.variationSummary ?? '-'}</p>
                   </div>
@@ -433,6 +437,12 @@ export default function Home() {
                     <p className="text-right">{activeOption ? formatValue(activeOption.artParams.rotationVariance) : '-'}</p>
                     <p className="text-muted-foreground">Size Curve</p>
                     <p className="text-right">{activeOption ? formatValue(activeOption.artParams.sizeCurve) : '-'}</p>
+                    <p className="text-muted-foreground">Noise Field</p>
+                    <p className="text-right text-xs leading-5">
+                      {activeOption?.artParams.noisePlacement
+                        ? `s:${activeOption.artParams.noisePlacement.scale} st:${activeOption.artParams.noisePlacement.strength}`
+                        : '-'}
+                    </p>
                   </div>
                 </div>
 

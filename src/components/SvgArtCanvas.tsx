@@ -1,5 +1,11 @@
 'use client';
 
+import { renderDelaunayDepthBlur } from '@/components/renderers/delaunayDepthBlur';
+import { renderFlowFieldParticles } from '@/components/renderers/flowFieldParticles';
+import { renderParticlesAttractors } from '@/components/renderers/particlesAttractors';
+import { renderVoronoiGradients } from '@/components/renderers/voronoiGradients';
+import type { RendererResult } from '@/components/renderers/types';
+
 export interface ArtParams {
   seed: number;
   mood: string;
@@ -14,6 +20,28 @@ export interface ArtParams {
   positionBias: 'center' | 'edge' | 'uniform';
   strokeWidth: number;
   layerCount: number;
+  renderAlgorithm?:
+    | 'flow-field-particles'
+    | 'voronoi-gradients'
+    | 'delaunay-depth-blur'
+    | 'particles-attractors'
+    | 'legacy-shapes';
+  paletteId?: string;
+  paletteFamily?: 'coolors-inspired' | 'chromotome-inspired' | 'generativepalettes-inspired';
+  noisePlacement?: {
+    scale: number;
+    strength: number;
+    octaves: number;
+    lacunarity: number;
+    gain: number;
+  };
+  algorithmConfig?: {
+    particleCount?: number;
+    stepCount?: number;
+    siteCount?: number;
+    attractorCount?: number;
+    blurLayers?: number;
+  };
 }
 
 interface SvgArtCanvasProps {
@@ -38,7 +66,7 @@ function seededNoise(seed: number, x: number, y: number = 0): number {
 
 function hexToRgb(hex: string): string {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result) return `rgba(0,0,0,0.5)`;
+  if (!result) return 'rgba(0,0,0,0.5)';
   const r = parseInt(result[1], 16);
   const g = parseInt(result[2], 16);
   const b = parseInt(result[3], 16);
@@ -52,8 +80,9 @@ function getPosition(
   height: number,
   positionBias: 'center' | 'edge' | 'uniform'
 ): { x: number; y: number } {
-  let baseX: number, baseY: number;
-  
+  let baseX: number;
+  let baseY: number;
+
   if (positionBias === 'center') {
     const centerX = width / 2;
     const centerY = height / 2;
@@ -80,10 +109,10 @@ function getPosition(
     baseX = seededRandom(localSeed * 100, 0, width);
     baseY = seededRandom(localSeed * 200, 0, height);
   }
-  
+
   const offsetX = seededNoise(localSeed * 10, 0) * chaos * 10 - chaos * 5;
   const offsetY = seededNoise(localSeed * 10, 100) * chaos * 10 - chaos * 5;
-  
+
   return {
     x: baseX + offsetX,
     y: baseY + offsetY,
@@ -99,11 +128,11 @@ function getSize(
   const normalized = (baseSize - 20) / (60 + complexity * 10);
   if (sizeCurve < 0.3) {
     return baseSize;
-  } else if (sizeCurve < 0.7) {
-    return 20 + (80 + complexity * 10) * Math.sqrt(normalized);
-  } else {
-    return 20 + (80 + complexity * 10) * Math.pow(normalized, 2);
   }
+  if (sizeCurve < 0.7) {
+    return 20 + (80 + complexity * 10) * Math.sqrt(normalized);
+  }
+  return 20 + (80 + complexity * 10) * Math.pow(normalized, 2);
 }
 
 export function getWavePathCount(mood: string, complexity: number): number {
@@ -111,7 +140,7 @@ export function getWavePathCount(mood: string, complexity: number): number {
   return Math.max(complexity, floor);
 }
 
-function renderShapesForType(
+function renderLegacyShapesForType(
   shapeType: string,
   params: ArtParams,
   width: number,
@@ -120,16 +149,16 @@ function renderShapesForType(
   totalLayers: number
 ): JSX.Element[] {
   const { seed, colors, complexity, chaosLevel, rotationVariance, sizeCurve, positionBias, strokeWidth } = params;
-  
+
   const elements: JSX.Element[] = [];
   const numShapes = complexity * 8;
   const shapesPerLayer = Math.ceil(numShapes / totalLayers);
   const startIndex = layerIndex * shapesPerLayer;
   const endIndex = Math.min(startIndex + shapesPerLayer, numShapes);
   const chaos = chaosLevel * 2;
-  
-  const layerOpacity = 1 - (layerIndex * 0.25);
-  
+
+  const layerOpacity = 1 - layerIndex * 0.25;
+
   if (shapeType === 'waves') {
     const wavePathCount = getWavePathCount(params.mood, complexity);
     for (let layer = 0; layer < wavePathCount; layer++) {
@@ -137,13 +166,13 @@ function renderShapesForType(
       const yOffset = (height / wavePathCount) * layer + 50;
       const amplitude = 30 + layer * 10;
       const frequency = 0.01 + layer * 0.002;
-      
+
       let pathD = '';
       for (let x = 0; x <= width; x += 5) {
         const y = yOffset + Math.sin(x * frequency) * amplitude;
         pathD += x === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`;
       }
-      
+
       elements.push(
         <path
           key={`wave-${layer}-l${layerIndex}`}
@@ -157,16 +186,16 @@ function renderShapesForType(
     }
     return elements;
   }
-  
+
   for (let i = startIndex; i < endIndex; i++) {
     const localSeed = seed + i + layerIndex * 1000;
     const { x, y } = getPosition(localSeed, chaos, width, height, positionBias);
     const size = getSize(localSeed, complexity, sizeCurve);
     const color = colors[i % colors.length];
-    const opacity = ((i - startIndex) / (endIndex - startIndex)) * 0.55 + 0.45;
-    
+    const opacity = ((i - startIndex) / Math.max(1, endIndex - startIndex)) * 0.55 + 0.45;
+
     const rotation = seededRandom(localSeed, 0, rotationVariance * (Math.PI / 180));
-    
+
     switch (shapeType) {
       case 'circles':
         elements.push(
@@ -293,44 +322,57 @@ function renderShapesForType(
         );
         break;
       }
+
+      default:
+        break;
     }
   }
-  
+
   return elements;
+}
+
+function renderLegacy(params: ArtParams, width: number, height: number): RendererResult {
+  const shapeLayerOrder = ['waves', 'curves', 'circles', 'spirals', 'triangles', 'lines'];
+  const sortedShapes = [...params.shapeTypes].sort((a, b) =>
+    shapeLayerOrder.indexOf(a) - shapeLayerOrder.indexOf(b)
+  );
+
+  const allElements: JSX.Element[] = [];
+
+  for (let layer = 0; layer < params.layerCount; layer++) {
+    for (const shapeType of sortedShapes) {
+      allElements.push(...renderLegacyShapesForType(shapeType, params, width, height, layer, params.layerCount));
+    }
+  }
+
+  return { defs: [], elements: allElements };
+}
+
+function renderByAlgorithm(params: ArtParams, width: number, height: number): RendererResult {
+  switch (params.renderAlgorithm) {
+    case 'flow-field-particles':
+      return renderFlowFieldParticles({ params, width, height });
+    case 'voronoi-gradients':
+      return renderVoronoiGradients({ params, width, height });
+    case 'delaunay-depth-blur':
+      return renderDelaunayDepthBlur({ params, width, height });
+    case 'particles-attractors':
+      return renderParticlesAttractors({ params, width, height });
+    default:
+      return renderLegacy(params, width, height);
+  }
 }
 
 export default function SvgArtCanvas({ params }: SvgArtCanvasProps) {
   const width = DEFAULT_SIZE;
   const height = DEFAULT_SIZE;
-  const { backgroundColors, shapeTypes, layerCount } = params;
-  
-  const bgColor = backgroundColors?.[0] || '#0a0a12';
-  
-  const shapeLayerOrder = ['waves', 'curves', 'circles', 'spirals', 'triangles', 'lines'];
-  const sortedShapes = [...shapeTypes].sort((a, b) => 
-    shapeLayerOrder.indexOf(a) - shapeLayerOrder.indexOf(b)
-  );
-  
-  const renderAllLayers = () => {
-    const allElements: JSX.Element[] = [];
-    
-    for (let layer = 0; layer < layerCount; layer++) {
-      for (const shapeType of sortedShapes) {
-        const layerElements = renderShapesForType(
-          shapeType,
-          params,
-          width,
-          height,
-          layer,
-          layerCount
-        );
-        allElements.push(...layerElements);
-      }
-    }
-    
-    return allElements;
-  };
-  
+  const bgColor = params.backgroundColors?.[0] || '#0a0a12';
+
+  const mode = params.renderAlgorithm ?? 'legacy-shapes';
+  const renderResult = mode === 'legacy-shapes'
+    ? renderLegacy(params, width, height)
+    : renderByAlgorithm(params, width, height);
+
   return (
     <svg
       width="100%"
@@ -341,9 +383,9 @@ export default function SvgArtCanvas({ params }: SvgArtCanvasProps) {
         backgroundColor: bgColor,
       }}
     >
+      <defs>{renderResult.defs}</defs>
       <rect x="0" y="0" width={width} height={height} fill={bgColor} opacity={0.9} />
-      
-      {renderAllLayers()}
+      {renderResult.elements}
     </svg>
   );
 }

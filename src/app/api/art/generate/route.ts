@@ -115,6 +115,11 @@ export async function POST(request: NextRequest) {
         confidence: moodResult.confidence ?? null,
         semanticProfile: moodResult.semanticProfile ?? null,
         pipelinePath: moodResult.semanticProfile?.pipelinePath ?? 'direct-semantic',
+        algorithmSelection: {
+          renderAlgorithm: options[0].artParams.renderAlgorithm ?? 'legacy-shapes',
+          paletteId: options[0].artParams.paletteId ?? null,
+          paletteFamily: options[0].artParams.paletteFamily ?? null,
+        },
       },
     });
   } catch (error: unknown) {

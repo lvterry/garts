@@ -8,6 +8,7 @@ import {
   type VariationContext,
 } from '@/lib/art-generator';
 import type { SemanticProfile } from '@/lib/ai';
+import { isKnownPaletteId } from '@/lib/art-generator/palettes';
 
 const semanticProfile: SemanticProfile = {
   coreMood: 'serene',
@@ -104,6 +105,21 @@ describe('art-generator controlled variation', () => {
     const second = generateArtParams('joyful', 'city lights', semanticProfile, context);
 
     expect(second).toEqual(first);
+  });
+
+  it('assigns curated palette, algorithm mode, and noise settings', () => {
+    const params = generateArtParams('ethereal', 'misty tide', semanticProfile, buildContext(1, 0.8, 747474));
+
+    expect(params.renderAlgorithm).toBeDefined();
+    expect(params.renderAlgorithm).not.toBe('legacy-shapes');
+    expect(params.paletteId).toBeDefined();
+    expect(isKnownPaletteId(params.paletteId ?? '')).toBe(true);
+    expect(params.paletteFamily).toBeDefined();
+    expect(params.noisePlacement).toBeDefined();
+    expect(params.noisePlacement?.octaves).toBeGreaterThanOrEqual(2);
+    expect(params.noisePlacement?.octaves).toBeLessThanOrEqual(6);
+    expect(params.algorithmConfig?.particleCount).toBeGreaterThanOrEqual(70);
+    expect(params.algorithmConfig?.siteCount).toBeGreaterThanOrEqual(24);
   });
 
   it('increases curve selection with semantic hints that favor curves', () => {

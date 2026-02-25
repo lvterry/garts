@@ -1,4 +1,5 @@
 import { SemanticProfile } from '@/lib/ai';
+import { PaletteFamily, selectCuratedPalette } from '@/lib/art-generator/palettes';
 
 export interface ArtParams {
   seed: number;
@@ -14,6 +15,28 @@ export interface ArtParams {
   positionBias: 'center' | 'edge' | 'uniform';
   strokeWidth: number;
   layerCount: number;
+  renderAlgorithm?:
+    | 'flow-field-particles'
+    | 'voronoi-gradients'
+    | 'delaunay-depth-blur'
+    | 'particles-attractors'
+    | 'legacy-shapes';
+  paletteId?: string;
+  paletteFamily?: PaletteFamily;
+  noisePlacement?: {
+    scale: number;
+    strength: number;
+    octaves: number;
+    lacunarity: number;
+    gain: number;
+  };
+  algorithmConfig?: {
+    particleCount?: number;
+    stepCount?: number;
+    siteCount?: number;
+    attractorCount?: number;
+    blurLayers?: number;
+  };
 }
 
 export interface VariationContext {
@@ -56,6 +79,12 @@ const CALM_MOOD_COMPLEXITY_FLOOR: Record<string, number> = {
   peaceful: 2,
   melancholic: 2,
 };
+const RENDER_ALGORITHMS: Array<NonNullable<ArtParams['renderAlgorithm']>> = [
+  'flow-field-particles',
+  'voronoi-gradients',
+  'delaunay-depth-blur',
+  'particles-attractors',
+];
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -63,6 +92,64 @@ function clamp(value: number, min: number, max: number): number {
 
 function normalizeSeed(seed: number): number {
   return Math.abs(seed) % 1_000_000;
+}
+
+function ensureRenderAlgorithm(value: ArtParams['renderAlgorithm']): NonNullable<ArtParams['renderAlgorithm']> {
+  return value && RENDER_ALGORITHMS.includes(value) ? value : 'legacy-shapes';
+}
+
+function selectRenderAlgorithm(
+  mood: string,
+  semanticProfile: SemanticProfile | undefined,
+  seed: number,
+  optionIndex: number
+): NonNullable<ArtParams['renderAlgorithm']> {
+  const normalizedMood = mood.toLowerCase();
+  const energy = clamp(semanticProfile?.energy ?? 0.5, 0, 1);
+  const calmSet = new Set(['serene', 'peaceful', 'ethereal', 'melancholic']);
+  const intenseSet = new Set(['chaotic', 'intense', 'energetic', 'ominous']);
+
+  let preferred: Array<NonNullable<ArtParams['renderAlgorithm']>>;
+  if (calmSet.has(normalizedMood) || energy < 0.38) {
+    preferred = ['voronoi-gradients', 'flow-field-particles', 'particles-attractors', 'delaunay-depth-blur'];
+  } else if (intenseSet.has(normalizedMood) || energy > 0.72) {
+    preferred = ['delaunay-depth-blur', 'particles-attractors', 'flow-field-particles', 'voronoi-gradients'];
+  } else {
+    preferred = ['flow-field-particles', 'voronoi-gradients', 'particles-attractors', 'delaunay-depth-blur'];
+  }
+
+  const pick = Math.floor(seededRandom(seed + optionIndex * 43) * preferred.length);
+  return preferred[pick] ?? preferred[0];
+}
+
+function buildNoisePlacement(
+  seed: number,
+  energy: number,
+  complexity: number,
+  optionIndex: number
+): NonNullable<ArtParams['noisePlacement']> {
+  const detailBoost = complexity / 10;
+  return {
+    scale: Number((0.004 + seededRandom(seed + 501) * 0.01 + detailBoost * 0.002).toFixed(4)),
+    strength: Number((0.7 + energy * 1.1 + optionIndex * 0.08).toFixed(2)),
+    octaves: clamp(2 + Math.round(energy * 2 + complexity / 5), 2, 6),
+    lacunarity: Number((1.8 + seededRandom(seed + 502) * 1.1).toFixed(2)),
+    gain: Number((0.38 + seededRandom(seed + 503) * 0.28).toFixed(2)),
+  };
+}
+
+function buildAlgorithmConfig(
+  seed: number,
+  complexity: number,
+  energy: number
+): NonNullable<ArtParams['algorithmConfig']> {
+  return {
+    particleCount: clamp(Math.round(70 + complexity * 16 + energy * 85 + seededRandom(seed + 511) * 20), 70, 260),
+    stepCount: clamp(Math.round(20 + complexity * 3 + energy * 8 + seededRandom(seed + 512) * 6), 20, 72),
+    siteCount: clamp(Math.round(24 + complexity * 7 + seededRandom(seed + 513) * 10), 24, 120),
+    attractorCount: clamp(Math.round(2 + energy * 3 + seededRandom(seed + 514) * 2), 2, 7),
+    blurLayers: clamp(Math.round(2 + energy * 2 + seededRandom(seed + 515)), 2, 5),
+  };
 }
 
 const moodToParams: Record<string, MoodParams> = {
@@ -407,109 +494,22 @@ function buildSemanticShapePool(
   }));
 }
 
-function hslToHex(h: number, s: number, l: number): string {
-  h = ((h % 360) + 360) % 360;
-  s = Math.max(0, Math.min(100, s));
-  l = Math.max(0, Math.min(100, l));
-
-  const c = (1 - Math.abs(2 * l / 100 - 1)) * s / 100;
-  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
-  const m = l / 100 - c / 2;
-
-  let r = 0, g = 0, b = 0;
-  if (h >= 0 && h < 60) { r = c; g = x; b = 0; }
-  else if (h >= 60 && h < 120) { r = x; g = c; b = 0; }
-  else if (h >= 120 && h < 180) { r = 0; g = c; b = x; }
-  else if (h >= 180 && h < 240) { r = 0; g = x; b = c; }
-  else if (h >= 240 && h < 300) { r = x; g = 0; b = c; }
-  else { r = c; g = 0; b = x; }
-
-  const toHex = (n: number) => {
-    const hex = Math.round((n + m) * 255).toString(16);
-    return hex.length === 1 ? '0' + hex : hex;
-  };
-
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
 function generateColorPalette(
   mood: string,
   keyword: string,
   seed: number,
   semanticProfile?: SemanticProfile
-): { shapeColors: string[]; backgroundColors: string[] } {
-  const moodData = moodToParams[mood] || moodToParams.neutral;
-  const ranges = moodData.colorRanges;
-  const bgRanges = moodData.bgColorRanges;
-  const { energy, valence } = getSemanticScalars(semanticProfile);
-
+): { shapeColors: string[]; backgroundColors: string[]; paletteId: string; paletteFamily: PaletteFamily } {
+  const { valence } = getSemanticScalars(semanticProfile);
   const baseSeed = hashKeyword(keyword).reduce((a, b) => a + b, 0) + seed;
+  const imageryTags = semanticProfile?.imageryTags ?? [];
 
-  const hueShift = valence * 18;
-  const saturationShift = (energy - 0.5) * 26;
-  const luminanceShift = valence * 8;
-
-  const baseH = seededRandom(baseSeed) * (ranges.h[1] - ranges.h[0]) + ranges.h[0] + hueShift;
-  const baseS = clamp(
-    seededRandom(baseSeed + 1) * (ranges.s[1] - ranges.s[0]) + ranges.s[0] + saturationShift,
-    20,
-    100
-  );
-  const baseL = clamp(
-    seededRandom(baseSeed + 2) * (ranges.l[1] - ranges.l[0]) + ranges.l[0] + luminanceShift,
-    15,
-    90
-  );
-
-  const shapeColors: string[] = [];
-
-  shapeColors.push(hslToHex(baseH, baseS, baseL));
-
-  const analogousOffset = 20 + seededRandom(baseSeed + 3) * 20;
-  shapeColors.push(hslToHex(baseH + analogousOffset, baseS, baseL));
-  shapeColors.push(hslToHex(baseH - analogousOffset, baseS, baseL));
-
-  const complementaryHue = (baseH + 180) % 360;
-  const compVariation = seededRandom(baseSeed + 4) * 20 - 10;
-  shapeColors.push(hslToHex(complementaryHue + compVariation, baseS * 0.8, baseL + 5));
-
-  if (seededRandom(baseSeed + 5) > 0.4) {
-    const tintedL = Math.min(90, baseL + 25);
-    shapeColors.push(hslToHex(baseH + seededRandom(baseSeed + 6) * 15 - 7.5, baseS * 0.5, tintedL));
-  }
-
-  if (seededRandom(baseSeed + 7) > 0.5) {
-    const shadedL = Math.max(15, baseL - 15);
-    shapeColors.push(hslToHex(baseH + seededRandom(baseSeed + 8) * 10 - 5, baseS * 1.1, shadedL));
-  }
-
-  const bgBaseSeed = baseSeed + 1000;
-  const bgH = seededRandom(bgBaseSeed) * (bgRanges.h[1] - bgRanges.h[0]) + bgRanges.h[0] - hueShift * 0.35;
-  const bgS = clamp(
-    seededRandom(bgBaseSeed + 1) * (bgRanges.s[1] - bgRanges.s[0]) + bgRanges.s[0] + saturationShift * 0.5,
-    10,
-    100
-  );
-  const bgL = clamp(
-    seededRandom(bgBaseSeed + 2) * (bgRanges.l[1] - bgRanges.l[0]) + bgRanges.l[0] - luminanceShift * 0.4,
-    4,
-    30
-  );
-
-  const backgroundColors: string[] = [];
-
-  backgroundColors.push(hslToHex(bgH, bgS, bgL));
-
-  const bgOffset = seededRandom(bgBaseSeed + 3) * 8 - 4;
-  backgroundColors.push(hslToHex(bgH + seededRandom(bgBaseSeed + 4) * 20 - 10, bgS * 0.8, bgL + bgOffset));
-
-  const bgCompHue = (bgH + 180) % 360;
-  backgroundColors.push(hslToHex(bgCompHue, bgS * 0.5, bgL - 5));
-
-  return {
-    shapeColors: shapeColors.slice(0, 6),
-    backgroundColors: backgroundColors.slice(0, 3),
-  };
+  return selectCuratedPalette({
+    mood,
+    seed: baseSeed,
+    valence,
+    imageryTags,
+  });
 }
 
 function selectShapeTypes(
@@ -652,6 +652,16 @@ function shapeDistance(left: string[], right: string[]): number {
 }
 
 export function computeOptionDistance(a: ArtParams, b: ArtParams): number {
+  const noiseDelta = a.noisePlacement && b.noisePlacement
+    ? (
+      Math.abs(a.noisePlacement.scale - b.noisePlacement.scale) * 35 +
+      Math.abs(a.noisePlacement.strength - b.noisePlacement.strength) / 2 +
+      Math.abs(a.noisePlacement.octaves - b.noisePlacement.octaves) / 4 +
+      Math.abs(a.noisePlacement.lacunarity - b.noisePlacement.lacunarity) / 2 +
+      Math.abs(a.noisePlacement.gain - b.noisePlacement.gain)
+    ) / 5
+    : 0;
+
   const deltas = [
     Math.abs(a.complexity - b.complexity) / 9,
     Math.abs(a.motionSpeed - b.motionSpeed) / 9,
@@ -662,6 +672,9 @@ export function computeOptionDistance(a: ArtParams, b: ArtParams): number {
     Math.abs(a.layerCount - b.layerCount) / 2,
     a.positionBias === b.positionBias ? 0 : 1,
     shapeDistance(a.shapeTypes, b.shapeTypes),
+    ensureRenderAlgorithm(a.renderAlgorithm) === ensureRenderAlgorithm(b.renderAlgorithm) ? 0 : 1,
+    (a.paletteId ?? '') === (b.paletteId ?? '') ? 0 : 1,
+    noiseDelta,
   ];
 
   return deltas.reduce((sum, delta) => sum + delta, 0) / deltas.length;
@@ -698,6 +711,14 @@ export function summarizeVariation(baseParams: ArtParams, variedParams: ArtParam
 
   if (shapeDistance(baseParams.shapeTypes, variedParams.shapeTypes) > 0) {
     changes.push(`shapeTypes:${baseParams.shapeTypes.join('|')}->${variedParams.shapeTypes.join('|')}`);
+  }
+
+  if (ensureRenderAlgorithm(baseParams.renderAlgorithm) !== ensureRenderAlgorithm(variedParams.renderAlgorithm)) {
+    changes.push(`algorithm:${ensureRenderAlgorithm(baseParams.renderAlgorithm)}->${ensureRenderAlgorithm(variedParams.renderAlgorithm)}`);
+  }
+
+  if ((baseParams.paletteId ?? '') !== (variedParams.paletteId ?? '')) {
+    changes.push(`palette:${baseParams.paletteId ?? 'n/a'}->${variedParams.paletteId ?? 'n/a'}`);
   }
 
   return changes.length > 0 ? changes.join(', ') : 'no significant variation';
@@ -739,7 +760,7 @@ function createBaseParams(
   const weightedShapePool = buildSemanticShapePool(moodData.shapePool, semanticProfile);
   const shapeTypes = selectShapeTypes(weightedShapePool, shapeCount, hashSeed + seed * 3 + 19);
 
-  const { shapeColors, backgroundColors } = generateColorPalette(
+  const { shapeColors, backgroundColors, paletteId, paletteFamily } = generateColorPalette(
     normalizedMood,
     keywordText,
     seed,
@@ -749,6 +770,12 @@ function createBaseParams(
   const tempoBoost = tempo === 'fast' ? 1.1 : tempo === 'calm' ? 0.9 : 1;
   const complexityShift = Math.round((energy - 0.5) * 2);
   const chaosShift = Math.round((energy - 0.5) * 3 - valence * 1.2);
+  const baseComplexity = clamp(
+    randomInRange(hashSeed + 100, moodData.complexity[0], moodData.complexity[1]) + complexityShift,
+    1,
+    10
+  );
+  const algorithm = selectRenderAlgorithm(normalizedMood, semanticProfile, seed + hashSeed, 0);
 
   const baseParams: ArtParams = {
     seed,
@@ -756,11 +783,7 @@ function createBaseParams(
     colors: shapeColors,
     backgroundColors,
     shapeTypes,
-    complexity: clamp(
-      randomInRange(hashSeed + 100, moodData.complexity[0], moodData.complexity[1]) + complexityShift,
-      1,
-      10
-    ),
+    complexity: baseComplexity,
     motionSpeed: clamp(
       Math.round(randomInRange(hashSeed + 200, moodData.motionSpeed[0], moodData.motionSpeed[1]) * tempoBoost),
       1,
@@ -780,6 +803,11 @@ function createBaseParams(
     positionBias: kwProps.positionBias,
     strokeWidth: clamp(kwProps.strokeWidth + (energy > 0.8 ? 1 : 0), 1, 7),
     layerCount: kwProps.layerCount,
+    renderAlgorithm: algorithm,
+    paletteId,
+    paletteFamily,
+    noisePlacement: buildNoisePlacement(seed + 271, energy, baseComplexity, 0),
+    algorithmConfig: buildAlgorithmConfig(seed + 331, baseComplexity, energy),
   };
 
   const cleanedParams = enforceCleanComposition(baseParams);
@@ -817,11 +845,31 @@ function applyControlledVariation(
     1,
     3
   );
+  const variedComplexity = varyInt(
+    baseParams.complexity,
+    1,
+    10,
+    variationSeed,
+    101,
+    strength,
+    variationContext.optionIndex,
+    5
+  );
+  const variedAlgorithm = strength > 0.45
+    ? selectRenderAlgorithm(baseParams.mood, semanticProfile, variationSeed + 991, variationContext.optionIndex)
+    : ensureRenderAlgorithm(baseParams.renderAlgorithm);
+  const valence = semanticProfile?.valence ?? 0;
+  const variedPalette = selectCuratedPalette({
+    mood: baseParams.mood,
+    seed: variationSeed + 1401 + variationContext.optionIndex * 97,
+    valence,
+    imageryTags: semanticProfile?.imageryTags ?? [],
+  });
 
   const variedParams: ArtParams = {
     ...baseParams,
     shapeTypes: selectShapeTypes(variedShapePool, shapeCount, variationSeed + 631),
-    complexity: varyInt(baseParams.complexity, 1, 10, variationSeed, 101, strength, variationContext.optionIndex, 5),
+    complexity: variedComplexity,
     motionSpeed: varyInt(baseParams.motionSpeed, 1, 10, variationSeed, 202, strength, variationContext.optionIndex, 5),
     chaosLevel: varyInt(baseParams.chaosLevel, 1, 10, variationSeed, 303, strength, variationContext.optionIndex, 6),
     rotationVariance: varyInt(baseParams.rotationVariance, 0, 359, variationSeed, 404, strength, variationContext.optionIndex, 150),
@@ -831,6 +879,22 @@ function applyControlledVariation(
     positionBias: varyPositionBias(baseParams.positionBias, variationSeed, strength),
     strokeWidth: varyInt(baseParams.strokeWidth, 1, 7, variationSeed, 606, strength, variationContext.optionIndex, 3),
     layerCount: varyInt(baseParams.layerCount, 1, 3, variationSeed, 707, strength, variationContext.optionIndex, 2),
+    renderAlgorithm: variedAlgorithm,
+    paletteId: variedPalette.paletteId,
+    paletteFamily: variedPalette.paletteFamily,
+    colors: variedPalette.shapeColors,
+    backgroundColors: variedPalette.backgroundColors,
+    noisePlacement: buildNoisePlacement(
+      variationSeed + 1501,
+      clamp((semanticProfile?.energy ?? 0.5) + strength * 0.15, 0, 1),
+      variedComplexity,
+      variationContext.optionIndex
+    ),
+    algorithmConfig: buildAlgorithmConfig(
+      variationSeed + 1601,
+      variedComplexity,
+      clamp((semanticProfile?.energy ?? 0.5) + strength * 0.2, 0, 1)
+    ),
   };
 
   return enforceCleanComposition(variedParams);
