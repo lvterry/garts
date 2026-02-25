@@ -39,4 +39,6 @@ vi.mock('@/lib/art-generator', () => ({
   artParamsToJSON: vi.fn().mockReturnValue(
     '{"seed":123456,"mood":"serene","colors":["#a8d8ea","#aa96da","#fcbad3","#ffffd2"],"shapeType":"circles","complexity":3,"motionSpeed":2,"chaosLevel":2}'
   ),
+  computeOptionDistance: vi.fn().mockReturnValue(0.45),
+  summarizeVariation: vi.fn().mockReturnValue('complexity:+2, chaos:+1'),
 }));

@@ -16,6 +16,14 @@ export interface ArtParams {
   layerCount: number;
 }
 
+export interface VariationContext {
+  optionIndex: number;
+  optionCount: number;
+  baseSeed: number;
+  mode: 'compare-controlled';
+  strength?: number;
+}
+
 interface ColorRanges {
   h: [number, number];
   s: [number, number];
@@ -36,8 +44,15 @@ interface MoodParams {
   chaosLevel: [number, number];
 }
 
+const OPTION_STRENGTH_PRESETS = [0.25, 0.55, 0.75, 0.9];
+const POSITION_OPTIONS: ArtParams['positionBias'][] = ['center', 'edge', 'uniform'];
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function normalizeSeed(seed: number): number {
+  return Math.abs(seed) % 1_000_000;
 }
 
 const moodToParams: Record<string, MoodParams> = {
@@ -210,13 +225,11 @@ interface KeywordProperties {
 
 function getKeywordProperties(keyword: string): KeywordProperties {
   const [h1, h2, h3, h4, h5, h6] = hashKeyword(keyword);
-  
-  const positionOptions: ('center' | 'edge' | 'uniform')[] = ['center', 'edge', 'uniform'];
-  
+
   return {
     rotationVariance: h1 % 360,
     sizeCurve: h2 % 100 / 100,
-    positionBias: positionOptions[h3 % 3],
+    positionBias: POSITION_OPTIONS[h3 % 3],
     strokeWidth: 1 + (h4 % 6),
     layerCount: 1 + (h5 % 3),
     shapeMixCount: 1 + (h6 % 3),
@@ -299,10 +312,9 @@ function generateColorPalette(
   const ranges = moodData.colorRanges;
   const bgRanges = moodData.bgColorRanges;
   const { energy, valence } = getSemanticScalars(semanticProfile);
-  
+
   const baseSeed = hashKeyword(keyword).reduce((a, b) => a + b, 0) + seed;
-  
-  // Generate shape colors (bright)
+
   const hueShift = valence * 18;
   const saturationShift = (energy - 0.5) * 26;
   const luminanceShift = valence * 8;
@@ -318,30 +330,29 @@ function generateColorPalette(
     15,
     90
   );
-  
+
   const shapeColors: string[] = [];
-  
+
   shapeColors.push(hslToHex(baseH, baseS, baseL));
-  
+
   const analogousOffset = 20 + seededRandom(baseSeed + 3) * 20;
   shapeColors.push(hslToHex(baseH + analogousOffset, baseS, baseL));
   shapeColors.push(hslToHex(baseH - analogousOffset, baseS, baseL));
-  
+
   const complementaryHue = (baseH + 180) % 360;
   const compVariation = seededRandom(baseSeed + 4) * 20 - 10;
   shapeColors.push(hslToHex(complementaryHue + compVariation, baseS * 0.8, baseL + 5));
-  
+
   if (seededRandom(baseSeed + 5) > 0.4) {
     const tintedL = Math.min(90, baseL + 25);
     shapeColors.push(hslToHex(baseH + seededRandom(baseSeed + 6) * 15 - 7.5, baseS * 0.5, tintedL));
   }
-  
+
   if (seededRandom(baseSeed + 7) > 0.5) {
     const shadedL = Math.max(15, baseL - 15);
     shapeColors.push(hslToHex(baseH + seededRandom(baseSeed + 8) * 10 - 5, baseS * 1.1, shadedL));
   }
-  
-  // Generate background colors (dark)
+
   const bgBaseSeed = baseSeed + 1000;
   const bgH = seededRandom(bgBaseSeed) * (bgRanges.h[1] - bgRanges.h[0]) + bgRanges.h[0] - hueShift * 0.35;
   const bgS = clamp(
@@ -354,20 +365,17 @@ function generateColorPalette(
     4,
     30
   );
-  
+
   const backgroundColors: string[] = [];
-  
-  // Dark base color
+
   backgroundColors.push(hslToHex(bgH, bgS, bgL));
-  
-  // Slightly lighter/darker variations
+
   const bgOffset = seededRandom(bgBaseSeed + 3) * 8 - 4;
   backgroundColors.push(hslToHex(bgH + seededRandom(bgBaseSeed + 4) * 20 - 10, bgS * 0.8, bgL + bgOffset));
-  
-  // Complementary dark accent
+
   const bgCompHue = (bgH + 180) % 360;
   backgroundColors.push(hslToHex(bgCompHue, bgS * 0.5, bgL - 5));
-  
+
   return {
     shapeColors: shapeColors.slice(0, 6),
     backgroundColors: backgroundColors.slice(0, 3),
@@ -376,16 +384,21 @@ function generateColorPalette(
 
 function selectShapeTypes(
   shapePool: ShapePoolItem[],
-  count: number
+  count: number,
+  selectionSeed: number
 ): string[] {
-  const totalWeight = shapePool.reduce((sum, item) => sum + item.weight, 0);
   const selected: string[] = [];
-  const available = [...shapePool];
-  
+  const available = shapePool.map((item) => ({ ...item }));
+
   for (let i = 0; i < count && available.length > 0; i++) {
-    let random = Math.random() * totalWeight;
-    let selectedIndex = 0;
-    
+    const totalWeight = available.reduce((sum, item) => sum + item.weight, 0);
+    if (totalWeight <= 0) {
+      break;
+    }
+
+    let random = seededRandom(selectionSeed + i * 17 + 1) * totalWeight;
+    let selectedIndex = available.length - 1;
+
     for (let j = 0; j < available.length; j++) {
       random -= available[j].weight;
       if (random <= 0) {
@@ -393,24 +406,194 @@ function selectShapeTypes(
         break;
       }
     }
-    
+
     selected.push(available[selectedIndex].type);
     available.splice(selectedIndex, 1);
   }
-  
+
   return selected;
 }
 
-export function generateArtParams(
+function resolveVariationStrength(variationContext?: VariationContext): number {
+  if (!variationContext) {
+    return 0;
+  }
+
+  if (typeof variationContext.strength === 'number') {
+    return clamp(variationContext.strength, 0, 1);
+  }
+
+  const index = clamp(variationContext.optionIndex, 0, OPTION_STRENGTH_PRESETS.length - 1);
+  return OPTION_STRENGTH_PRESETS[index];
+}
+
+function buildVariationSeed(hashSeed: number, variationContext: VariationContext): number {
+  const seed = variationContext.baseSeed * 31 + hashSeed * 17 + variationContext.optionIndex * 997;
+  return normalizeSeed(seed);
+}
+
+function buildVariationShapePool(
+  shapePool: ShapePoolItem[],
+  variationSeed: number,
+  strength: number,
+  optionIndex: number
+): ShapePoolItem[] {
+  if (strength <= 0) {
+    return shapePool;
+  }
+
+  const directionalBias = optionIndex === 0 ? -0.2 : 0.2;
+
+  return shapePool.map((item, idx) => {
+    const noise = seededRandom(variationSeed + idx * 23 + 701) * 2 - 1;
+    const scale = 1 + noise * strength * 0.6 + directionalBias * strength;
+    return {
+      ...item,
+      weight: Math.max(0.05, item.weight * scale),
+    };
+  });
+}
+
+function varyInt(
+  base: number,
+  min: number,
+  max: number,
+  variationSeed: number,
+  offset: number,
+  strength: number,
+  optionIndex: number,
+  amplitude: number
+): number {
+  if (strength <= 0) {
+    return clamp(base, min, max);
+  }
+
+  const jitter = seededRandom(variationSeed + offset) * 2 - 1;
+  const directionalBias = optionIndex === 0 ? -0.35 : 0.35;
+  const rawDelta = (jitter * 0.65 + directionalBias) * amplitude * strength;
+
+  return clamp(base + Math.round(rawDelta), min, max);
+}
+
+function varyFloat(
+  base: number,
+  min: number,
+  max: number,
+  variationSeed: number,
+  offset: number,
+  strength: number,
+  optionIndex: number,
+  amplitude: number
+): number {
+  if (strength <= 0) {
+    return clamp(base, min, max);
+  }
+
+  const jitter = seededRandom(variationSeed + offset) * 2 - 1;
+  const directionalBias = optionIndex === 0 ? -0.3 : 0.3;
+  const delta = (jitter * 0.7 + directionalBias) * amplitude * strength;
+  return clamp(base + delta, min, max);
+}
+
+function varyPositionBias(
+  base: ArtParams['positionBias'],
+  variationSeed: number,
+  strength: number
+): ArtParams['positionBias'] {
+  if (strength < 0.35 || seededRandom(variationSeed + 808) < 0.25) {
+    return base;
+  }
+
+  const alternatives = POSITION_OPTIONS.filter((option) => option !== base);
+  const selectedIdx = Math.floor(seededRandom(variationSeed + 809) * alternatives.length);
+  return alternatives[selectedIdx] ?? base;
+}
+
+function shapeDistance(left: string[], right: string[]): number {
+  const leftSet = new Set(left);
+  const rightSet = new Set(right);
+  const union = new Set([...Array.from(leftSet), ...Array.from(rightSet)]);
+  if (union.size === 0) {
+    return 0;
+  }
+
+  const intersectionCount = Array.from(leftSet).filter((shape) => rightSet.has(shape)).length;
+  return 1 - intersectionCount / union.size;
+}
+
+export function computeOptionDistance(a: ArtParams, b: ArtParams): number {
+  const deltas = [
+    Math.abs(a.complexity - b.complexity) / 9,
+    Math.abs(a.motionSpeed - b.motionSpeed) / 9,
+    Math.abs(a.chaosLevel - b.chaosLevel) / 9,
+    Math.abs(a.rotationVariance - b.rotationVariance) / 359,
+    Math.abs(a.sizeCurve - b.sizeCurve),
+    Math.abs(a.strokeWidth - b.strokeWidth) / 6,
+    Math.abs(a.layerCount - b.layerCount) / 2,
+    a.positionBias === b.positionBias ? 0 : 1,
+    shapeDistance(a.shapeTypes, b.shapeTypes),
+  ];
+
+  return deltas.reduce((sum, delta) => sum + delta, 0) / deltas.length;
+}
+
+export function summarizeVariation(baseParams: ArtParams, variedParams: ArtParams): string {
+  const changes: string[] = [];
+  const numberFields: Array<keyof Pick<ArtParams, 'complexity' | 'motionSpeed' | 'chaosLevel' | 'rotationVariance' | 'strokeWidth' | 'layerCount'>> = [
+    'complexity',
+    'motionSpeed',
+    'chaosLevel',
+    'rotationVariance',
+    'strokeWidth',
+    'layerCount',
+  ];
+
+  for (const field of numberFields) {
+    const delta = variedParams[field] - baseParams[field];
+    if (delta !== 0) {
+      const sign = delta > 0 ? '+' : '';
+      changes.push(`${field}:${sign}${delta}`);
+    }
+  }
+
+  if (Math.abs(variedParams.sizeCurve - baseParams.sizeCurve) >= 0.05) {
+    const sizeDelta = (variedParams.sizeCurve - baseParams.sizeCurve).toFixed(2);
+    const sign = variedParams.sizeCurve >= baseParams.sizeCurve ? '+' : '';
+    changes.push(`sizeCurve:${sign}${sizeDelta}`);
+  }
+
+  if (variedParams.positionBias !== baseParams.positionBias) {
+    changes.push(`positionBias:${baseParams.positionBias}->${variedParams.positionBias}`);
+  }
+
+  if (shapeDistance(baseParams.shapeTypes, variedParams.shapeTypes) > 0) {
+    changes.push(`shapeTypes:${baseParams.shapeTypes.join('|')}->${variedParams.shapeTypes.join('|')}`);
+  }
+
+  return changes.length > 0 ? changes.join(', ') : 'no significant variation';
+}
+
+export function buildVariationMeta(
+  baseParams: ArtParams,
+  variedParams: ArtParams
+): { variationSummary: string; optionDistance: number } {
+  return {
+    variationSummary: summarizeVariation(baseParams, variedParams),
+    optionDistance: Number(computeOptionDistance(baseParams, variedParams).toFixed(3)),
+  };
+}
+
+function createBaseParams(
   mood: string,
-  keyword?: string,
-  semanticProfile?: SemanticProfile
+  keyword: string | undefined,
+  semanticProfile: SemanticProfile | undefined,
+  seed: number
 ): ArtParams {
-  const seed = Math.floor(Math.random() * 1000000);
   const normalizedMood = mood.toLowerCase();
   const moodData = moodToParams[normalizedMood] || moodToParams.neutral;
   const { energy, valence, tempo } = getSemanticScalars(semanticProfile);
-  
+  const keywordText = keyword || '';
+
   const kwProps = keyword ? getKeywordProperties(keyword) : {
     rotationVariance: 45,
     sizeCurve: 0.5,
@@ -419,21 +602,20 @@ export function generateArtParams(
     layerCount: 1,
     shapeMixCount: 1,
   };
-  
+
+  const hashSeed = keyword ? hashKeyword(keyword).reduce((a, b) => a + b, 0) : seed;
   const shapeCountBoost = energy > 0.72 ? 1 : 0;
   const shapeCount = clamp(kwProps.shapeMixCount + shapeCountBoost, 1, 3);
   const weightedShapePool = buildSemanticShapePool(moodData.shapePool, semanticProfile);
-  const shapeTypes = selectShapeTypes(weightedShapePool, shapeCount);
-  
+  const shapeTypes = selectShapeTypes(weightedShapePool, shapeCount, hashSeed + seed * 3 + 19);
+
   const { shapeColors, backgroundColors } = generateColorPalette(
     normalizedMood,
-    keyword || '',
+    keywordText,
     seed,
     semanticProfile
   );
-  
-  const hashSeed = keyword ? hashKeyword(keyword).reduce((a, b) => a + b, 0) : seed;
-  
+
   const tempoBoost = tempo === 'fast' ? 1.1 : tempo === 'calm' ? 0.9 : 1;
   const complexityShift = Math.round((energy - 0.5) * 2);
   const chaosShift = Math.round((energy - 0.5) * 3 - valence * 1.2);
@@ -469,6 +651,77 @@ export function generateArtParams(
     strokeWidth: clamp(kwProps.strokeWidth + (energy > 0.8 ? 1 : 0), 1, 7),
     layerCount: kwProps.layerCount,
   };
+}
+
+function applyControlledVariation(
+  baseParams: ArtParams,
+  keyword: string | undefined,
+  semanticProfile: SemanticProfile | undefined,
+  variationContext: VariationContext
+): ArtParams {
+  const strength = resolveVariationStrength(variationContext);
+  if (strength <= 0) {
+    return baseParams;
+  }
+
+  const keywordHashSeed = keyword ? hashKeyword(keyword).reduce((a, b) => a + b, 0) : baseParams.seed;
+  const variationSeed = buildVariationSeed(keywordHashSeed, variationContext);
+  const moodData = moodToParams[baseParams.mood] || moodToParams.neutral;
+
+  const shapePool = buildSemanticShapePool(moodData.shapePool, semanticProfile);
+  const variedShapePool = buildVariationShapePool(
+    shapePool,
+    variationSeed,
+    strength,
+    variationContext.optionIndex
+  );
+
+  const shapeCount = clamp(
+    baseParams.shapeTypes.length + (strength > 0.65 ? 1 : 0) - (variationContext.optionIndex === 0 ? 1 : 0),
+    1,
+    3
+  );
+
+  return {
+    ...baseParams,
+    shapeTypes: selectShapeTypes(variedShapePool, shapeCount, variationSeed + 631),
+    complexity: varyInt(baseParams.complexity, 1, 10, variationSeed, 101, strength, variationContext.optionIndex, 5),
+    motionSpeed: varyInt(baseParams.motionSpeed, 1, 10, variationSeed, 202, strength, variationContext.optionIndex, 5),
+    chaosLevel: varyInt(baseParams.chaosLevel, 1, 10, variationSeed, 303, strength, variationContext.optionIndex, 6),
+    rotationVariance: varyInt(baseParams.rotationVariance, 0, 359, variationSeed, 404, strength, variationContext.optionIndex, 150),
+    sizeCurve: Number(
+      varyFloat(baseParams.sizeCurve, 0, 1, variationSeed, 505, strength, variationContext.optionIndex, 0.45).toFixed(2)
+    ),
+    positionBias: varyPositionBias(baseParams.positionBias, variationSeed, strength),
+    strokeWidth: varyInt(baseParams.strokeWidth, 1, 7, variationSeed, 606, strength, variationContext.optionIndex, 3),
+    layerCount: varyInt(baseParams.layerCount, 1, 3, variationSeed, 707, strength, variationContext.optionIndex, 2),
+  };
+}
+
+function resolveSeed(keyword: string | undefined, variationContext?: VariationContext): number {
+  if (!variationContext) {
+    return Math.floor(Math.random() * 1000000);
+  }
+
+  const keywordSeed = keyword ? hashKeyword(keyword).reduce((a, b) => a + b, 0) : 0;
+  const derived = variationContext.baseSeed * 13 + (variationContext.optionIndex + 1) * 7919 + keywordSeed * 7;
+  return normalizeSeed(derived);
+}
+
+export function generateArtParams(
+  mood: string,
+  keyword?: string,
+  semanticProfile?: SemanticProfile,
+  variationContext?: VariationContext
+): ArtParams {
+  const seed = resolveSeed(keyword, variationContext);
+  const baseParams = createBaseParams(mood, keyword, semanticProfile, seed);
+
+  if (!variationContext || variationContext.mode !== 'compare-controlled') {
+    return baseParams;
+  }
+
+  return applyControlledVariation(baseParams, keyword, semanticProfile, variationContext);
 }
 
 export function artParamsToJSON(params: ArtParams): string {

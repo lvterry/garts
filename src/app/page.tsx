@@ -38,6 +38,10 @@ interface PreviewOption {
   optionId: string;
   label: string;
   artParams: ArtParams;
+  meta?: {
+    optionDistance?: number;
+    variationSummary?: string;
+  };
 }
 
 interface ArtworkData {
@@ -393,6 +397,8 @@ export default function Home() {
                     <p className="text-right">{activeOption?.label ?? '-'}</p>
                     <p className="text-muted-foreground">Seed</p>
                     <p className="text-right">{activeOption?.artParams.seed ?? '-'}</p>
+                    <p className="text-muted-foreground">Variation</p>
+                    <p className="text-right text-xs leading-5">{activeOption?.meta?.variationSummary ?? '-'}</p>
                   </div>
                 </div>
 

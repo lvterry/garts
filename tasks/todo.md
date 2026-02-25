@@ -198,3 +198,30 @@ Support side-by-side artwork comparison by generating two options per request, a
   - `npm run test`: pass (13/13)
   - `npx tsc --noEmit`: pass
   - `npm run lint`: pass with one existing warning in `src/app/layout.tsx` (`@next/next/no-page-custom-font`)
+
+# Option Diversity Upgrade (2026-02-25)
+
+## Goal
+Increase perceptual difference between Option A/B for the same keyword while locking mood/semantic intent.
+
+## Action Items
+- [x] Add optional variation context to generator without breaking existing API calls.
+- [x] Refactor generator into baseline generation plus controlled per-option perturbation.
+- [x] Replace shape type sampling with deterministic seed-based weighted sampling and fix no-recompute-weight issue.
+- [x] Add option distance metric and route-level retry with stronger variation when distance is below threshold.
+- [x] Keep `/api/art/generate` backward compatibility (`artParams === options[0].artParams`).
+- [x] Add/extend tests for route behavior and generator variation behavior.
+- [x] Add plan doc in `tasks/option-diversity-plan.md`.
+
+## Review
+- Status: Implemented
+- Files changed:
+  - `src/lib/art-generator/index.ts`
+  - `src/app/api/art/generate/route.ts`
+  - `src/test/setup.ts`
+  - `src/test/art-generate.test.ts`
+  - `src/test/art-generator-variation.test.ts`
+  - `tasks/option-diversity-plan.md`
+- Validation:
+  - `npm run test`: pass (17/17)
+  - `npx tsc --noEmit`: pass
