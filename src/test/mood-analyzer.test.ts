@@ -35,7 +35,23 @@ describe('createMoodAnalyzer', () => {
   it('handles different mood keywords', async () => {
     const analyzer = createMoodAnalyzer();
     
-    const validMoods = ['serene', 'chaotic', 'melancholic', 'joyful', 'energetic', 'mysterious', 'peaceful', 'intense', 'neutral'];
+    const validMoods = [
+      'serene',
+      'chaotic',
+      'melancholic',
+      'joyful',
+      'energetic',
+      'mysterious',
+      'peaceful',
+      'intense',
+      'neutral',
+      'nostalgic',
+      'romantic',
+      'playful',
+      'ominous',
+      'ethereal',
+      'gritty',
+    ];
     
     const testKeywords = ['peaceful', 'chaos', 'sadness', 'happy', 'excited', 'mystery', 'calm', 'intense', 'okay'];
     

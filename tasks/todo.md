@@ -308,3 +308,32 @@ Prevent calm mood outputs (notably `serene`) from collapsing into sparse single-
   - `npm test -- src/test/svg-art-canvas.test.ts`: pass
   - `npm test`: pass (23/23)
   - `npx tsc --noEmit`: pass
+
+# Mood Taxonomy Expansion (2026-02-25)
+
+## Goal
+Expand canonical moods from 9 to 15 to increase variation while preserving strict canonicalization and backward-compatible API behavior.
+
+## Action Items
+- [x] Add six new canonical moods to analyzer validation, defaults, hints, and prompt schema.
+- [x] Add six new mood parameter mappings in generator with deterministic color/shape/dynamics ranges.
+- [x] Update analyzer tests to accept the expanded canonical mood set.
+- [x] Add semantic parser coverage for new canonical mood acceptance and unknown mood normalization fallback.
+- [x] Add generator semantic smoke coverage for the six new moods with bounds assertions.
+- [x] Add a dedicated plan doc at `tasks/mood-taxonomy-expansion-plan.md`.
+- [x] Update README mood taxonomy documentation to the 15-mood set.
+- [x] Run full test suite and capture results.
+
+## Review
+- Status: Implemented
+- Files changed:
+  - `src/lib/ai/semantic.ts`
+  - `src/lib/art-generator/index.ts`
+  - `src/test/mood-analyzer.test.ts`
+  - `src/test/semantic.test.ts`
+  - `src/test/art-generator-semantic.test.ts`
+  - `README.md`
+  - `tasks/mood-taxonomy-expansion-plan.md`
+  - `tasks/todo.md`
+- Validation:
+  - `npm run test`: pass (26/26)

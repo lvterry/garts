@@ -10,6 +10,12 @@ export const VALID_MOODS = [
   'peaceful',
   'intense',
   'neutral',
+  'nostalgic',
+  'romantic',
+  'playful',
+  'ominous',
+  'ethereal',
+  'gritty',
 ] as const;
 
 const TEMPO_VALUES: Tempo[] = ['calm', 'medium', 'fast'];
@@ -25,6 +31,12 @@ const moodDefaults: Record<string, { energy: number; valence: number; tempo: Tem
   peaceful: { energy: 0.2, valence: 0.5, tempo: 'calm' },
   intense: { energy: 0.85, valence: -0.2, tempo: 'fast' },
   neutral: { energy: 0.5, valence: 0, tempo: 'medium' },
+  nostalgic: { energy: 0.35, valence: 0.15, tempo: 'calm' },
+  romantic: { energy: 0.45, valence: 0.65, tempo: 'medium' },
+  playful: { energy: 0.78, valence: 0.72, tempo: 'fast' },
+  ominous: { energy: 0.62, valence: -0.65, tempo: 'medium' },
+  ethereal: { energy: 0.3, valence: 0.25, tempo: 'calm' },
+  gritty: { energy: 0.7, valence: -0.25, tempo: 'fast' },
 };
 
 const moodKeywordHints: Record<string, string[]> = {
@@ -36,6 +48,12 @@ const moodKeywordHints: Record<string, string[]> = {
   chaotic: ['storm', 'chaos', 'noise', 'glitch', 'wild'],
   mysterious: ['night', 'shadow', 'fog', 'secret', 'dream'],
   intense: ['fire', 'rage', 'battle', 'power', 'explosion'],
+  nostalgic: ['vintage', 'memory', 'old', 'retro', 'sepia', 'nostalgia'],
+  romantic: ['romance', 'love', 'rose', 'candle', 'tender', 'intimate'],
+  playful: ['fun', 'play', 'whimsy', 'bouncy', 'toy', 'sparkle'],
+  ominous: ['ominous', 'dread', 'threat', 'eerie', 'foreboding', 'dark'],
+  ethereal: ['ethereal', 'misty', 'celestial', 'dreamlike', 'airy', 'halo'],
+  gritty: ['gritty', 'urban', 'raw', 'dust', 'rough', 'concrete'],
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -120,7 +138,7 @@ export function buildPrompt(keyword: string, pipelinePath: 'direct-semantic' | '
     'Return ONLY valid JSON. No markdown, no explanation.',
     'Use this exact schema:',
     '{',
-    '  "mood": "serene|chaotic|joyful|melancholic|energetic|mysterious|peaceful|intense|neutral",',
+    '  "mood": "serene|chaotic|joyful|melancholic|energetic|mysterious|peaceful|intense|neutral|nostalgic|romantic|playful|ominous|ethereal|gritty",',
     '  "confidence": 0..1,',
     '  "semanticProfile": {',
     '    "coreMood": "same enum as mood",',

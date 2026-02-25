@@ -34,6 +34,46 @@ describe('semantic parser', () => {
     expect(response.semanticProfile?.coreMood).toBe('peaceful');
     expect(response.semanticProfile?.pipelinePath).toBe('direct-semantic');
   });
+
+  it('accepts newly added canonical moods', () => {
+    const response = parseModelSemanticResponse(
+      JSON.stringify({
+        mood: 'ethereal',
+        confidence: 0.77,
+        semanticProfile: {
+          coreMood: 'ethereal',
+          energy: 0.31,
+          valence: 0.28,
+          tempo: 'calm',
+          imageryTags: ['mist', 'halo'],
+          styleHints: ['dreamy'],
+        },
+      }),
+      'celestial mist',
+      'direct-semantic'
+    );
+
+    expect(response.mood).toBe('ethereal');
+    expect(response.semanticProfile?.coreMood).toBe('ethereal');
+  });
+
+  it('normalizes unknown model moods to inferred canonical fallback', () => {
+    const response = parseModelSemanticResponse(
+      JSON.stringify({
+        mood: 'alien-gloom',
+        confidence: 0.81,
+        semanticProfile: {
+          coreMood: 'void',
+          tempo: 'medium',
+        },
+      }),
+      'storm warning',
+      'direct-semantic'
+    );
+
+    expect(response.mood).toBe('chaotic');
+    expect(response.semanticProfile?.coreMood).toBe('chaotic');
+  });
 });
 
 describe('expansion gate', () => {

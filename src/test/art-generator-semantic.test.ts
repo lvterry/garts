@@ -60,4 +60,33 @@ describe('generateArtParams semantic mapping', () => {
     expect(getMoodComplexityFloor('peaceful')).toBe(2);
     expect(getMoodComplexityFloor('chaotic')).toBe(1);
   });
+
+  it('supports new canonical moods with bounded params', () => {
+    const newMoods = ['nostalgic', 'romantic', 'playful', 'ominous', 'ethereal', 'gritty'] as const;
+
+    for (const mood of newMoods) {
+      const params = generateArtParams(
+        mood,
+        `mood smoke ${mood}`,
+        {
+          ...baseProfile,
+          coreMood: mood,
+        },
+        buildContext(0, 42)
+      );
+
+      expect(params.mood).toBe(mood);
+      expect(params.colors.length).toBeGreaterThan(0);
+      expect(params.backgroundColors.length).toBeGreaterThan(0);
+      expect(params.shapeTypes.length).toBeGreaterThan(0);
+      expect(params.complexity).toBeGreaterThanOrEqual(1);
+      expect(params.complexity).toBeLessThanOrEqual(10);
+      expect(params.motionSpeed).toBeGreaterThanOrEqual(1);
+      expect(params.motionSpeed).toBeLessThanOrEqual(10);
+      expect(params.chaosLevel).toBeGreaterThanOrEqual(1);
+      expect(params.chaosLevel).toBeLessThanOrEqual(6);
+      expect(params.rotationVariance).toBeGreaterThanOrEqual(0);
+      expect(params.rotationVariance).toBeLessThanOrEqual(220);
+    }
+  });
 });

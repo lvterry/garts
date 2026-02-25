@@ -2,6 +2,11 @@
 
 Generate unique art based on mood keywords using AI.
 
+## Canonical Mood Taxonomy
+
+The analyzer and generator use a strict 15-mood canonical set:
+`serene`, `chaotic`, `joyful`, `melancholic`, `energetic`, `mysterious`, `peaceful`, `intense`, `neutral`, `nostalgic`, `romantic`, `playful`, `ominous`, `ethereal`, `gritty`.
+
 ## Tech Stack
 
 - **Frontend**: Next.js 14 (App Router)
