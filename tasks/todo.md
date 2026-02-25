@@ -225,3 +225,86 @@ Increase perceptual difference between Option A/B for the same keyword while loc
 - Validation:
   - `npm run test`: pass (17/17)
   - `npx tsc --noEmit`: pass
+
+# Artwork Cleanliness Convergence (2026-02-25)
+
+## Goal
+Reduce visual clutter by default without introducing new UI controls, while preserving dual-option distance guard behavior.
+
+## Action Items
+- [x] Add generator-side cleanliness caps (`shapeTypes/layerCount/complexity/chaos/rotation`) via deterministic post-processing.
+- [x] Apply cleanliness enforcement in both base generation and controlled variation paths.
+- [x] Upgrade route-level option retry from one-shot recovery to bounded multi-retry with strength escalation.
+- [x] Extend generator tests to lock cleanliness bounds and density budget.
+- [x] Extend route tests to verify retry cap behavior.
+- [x] Run verification commands and record results.
+
+## Review
+- Status: Implemented
+- Files changed:
+  - `src/lib/art-generator/index.ts`
+  - `src/app/api/art/generate/route.ts`
+  - `src/test/art-generator-variation.test.ts`
+  - `src/test/art-generate.test.ts`
+  - `tasks/todo.md`
+- Validation:
+  - `npm run test`: pass (18/18)
+  - `npx tsc --noEmit`: pass
+- Risks / Notes:
+  - Cleanliness caps can reduce perceived diversity for high-energy prompts; mitigate through existing bounded retry in option generation.
+
+# Curve Shape Extension (2026-02-25)
+
+## Goal
+Add an organic `curves` shape as an independent shape type, wire it into semantic shape selection, and preserve existing cleanliness constraints.
+
+## Action Items
+- [x] Add `curves` rendering branch in `SvgArtCanvas` using deterministic multi-segment bezier paths.
+- [x] Keep curve behavior mapped to existing params (`sizeCurve`, `chaosLevel`, `rotationVariance`, `strokeWidth`, layer opacity).
+- [x] Insert `curves` into shape layering order between wave-like and spiral-like strokes.
+- [x] Add `curves` into mood shape pools for `serene`, `melancholic`, `peaceful`, `mysterious`, and `neutral` with restrained base weights.
+- [x] Add semantic/style and imagery boosts for `curves` (`organic/dreamy/abstract`, `ocean/forest/sky/night`).
+- [x] Extend tests for curve-related semantic selection behavior and API compatibility.
+- [x] Run full verification and capture results below.
+
+## Review
+- Status: Implemented
+- Files changed:
+  - `src/components/SvgArtCanvas.tsx`
+  - `src/lib/art-generator/index.ts`
+  - `src/test/art-generator-variation.test.ts`
+  - `src/test/art-generate.test.ts`
+  - `tasks/todo.md`
+- Validation:
+  - `npm test -- src/test/art-generator-variation.test.ts`: pass
+  - `npm test -- src/test/art-generate.test.ts`: pass
+  - `npm test`: pass (19/19)
+  - `npx tsc --noEmit`: pass
+
+# Serene Visual Density Improvement (2026-02-25)
+
+## Goal
+Prevent calm mood outputs (notably `serene`) from collapsing into sparse single-line compositions while preserving clean aesthetics.
+
+## Action Items
+- [x] Add calm-mood complexity floor policy in generator output and enforce it in both base and variation paths.
+- [x] Update density enforcement logic to reduce layer/shape mix before reducing complexity under floor.
+- [x] Add renderer-side minimum wave-path safeguard for low-complexity calm outputs.
+- [x] Add/extend tests for calm floor policy, density enforcement behavior, and wave minimum-path rule.
+- [x] Run verification commands and capture results.
+
+## Review
+- Status: Implemented
+- Files changed:
+  - `src/lib/art-generator/index.ts`
+  - `src/components/SvgArtCanvas.tsx`
+  - `src/test/art-generator-semantic.test.ts`
+  - `src/test/art-generator-variation.test.ts`
+  - `src/test/svg-art-canvas.test.ts`
+  - `tasks/todo.md`
+- Validation:
+  - `npm test -- src/test/art-generator-semantic.test.ts`: pass
+  - `npm test -- src/test/art-generator-variation.test.ts`: pass
+  - `npm test -- src/test/svg-art-canvas.test.ts`: pass
+  - `npm test`: pass (23/23)
+  - `npx tsc --noEmit`: pass

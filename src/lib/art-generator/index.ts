@@ -46,6 +46,16 @@ interface MoodParams {
 
 const OPTION_STRENGTH_PRESETS = [0.25, 0.55, 0.75, 0.9];
 const POSITION_OPTIONS: ArtParams['positionBias'][] = ['center', 'edge', 'uniform'];
+const MAX_VISUAL_DENSITY = 14;
+const MAX_SHAPE_TYPES = 2;
+const MAX_LAYER_COUNT = 2;
+const MAX_CHAOS_LEVEL = 6;
+const MAX_ROTATION_VARIANCE = 220;
+const CALM_MOOD_COMPLEXITY_FLOOR: Record<string, number> = {
+  serene: 2,
+  peaceful: 2,
+  melancholic: 2,
+};
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -60,9 +70,10 @@ const moodToParams: Record<string, MoodParams> = {
     colorRanges: { h: [180, 220], s: [40, 70], l: [60, 85] },
     bgColorRanges: { h: [200, 240], s: [20, 50], l: [12, 22] },
     shapePool: [
-      { type: 'circles', weight: 0.5 },
-      { type: 'waves', weight: 0.3 },
-      { type: 'spirals', weight: 0.2 },
+      { type: 'circles', weight: 0.4 },
+      { type: 'waves', weight: 0.25 },
+      { type: 'spirals', weight: 0.15 },
+      { type: 'curves', weight: 0.2 },
     ],
     complexity: [2, 4],
     motionSpeed: [1, 3],
@@ -95,9 +106,10 @@ const moodToParams: Record<string, MoodParams> = {
     colorRanges: { h: [200, 240], s: [20, 40], l: [40, 60] },
     bgColorRanges: { h: [220, 260], s: [15, 35], l: [8, 18] },
     shapePool: [
-      { type: 'waves', weight: 0.5 },
-      { type: 'circles', weight: 0.3 },
-      { type: 'lines', weight: 0.2 },
+      { type: 'waves', weight: 0.4 },
+      { type: 'circles', weight: 0.2 },
+      { type: 'lines', weight: 0.15 },
+      { type: 'curves', weight: 0.25 },
     ],
     complexity: [3, 5],
     motionSpeed: [1, 3],
@@ -119,9 +131,10 @@ const moodToParams: Record<string, MoodParams> = {
     colorRanges: { h: [260, 310], s: [50, 80], l: [45, 65] },
     bgColorRanges: { h: [270, 320], s: [30, 60], l: [8, 18] },
     shapePool: [
-      { type: 'circles', weight: 0.4 },
-      { type: 'waves', weight: 0.3 },
+      { type: 'circles', weight: 0.3 },
+      { type: 'waves', weight: 0.2 },
       { type: 'spirals', weight: 0.3 },
+      { type: 'curves', weight: 0.2 },
     ],
     complexity: [4, 6],
     motionSpeed: [2, 4],
@@ -131,9 +144,10 @@ const moodToParams: Record<string, MoodParams> = {
     colorRanges: { h: [90, 150], s: [35, 60], l: [55, 75] },
     bgColorRanges: { h: [100, 160], s: [20, 45], l: [12, 22] },
     shapePool: [
-      { type: 'waves', weight: 0.45 },
-      { type: 'circles', weight: 0.35 },
+      { type: 'waves', weight: 0.35 },
+      { type: 'circles', weight: 0.25 },
       { type: 'spirals', weight: 0.2 },
+      { type: 'curves', weight: 0.2 },
     ],
     complexity: [2, 4],
     motionSpeed: [1, 3],
@@ -155,9 +169,10 @@ const moodToParams: Record<string, MoodParams> = {
     colorRanges: { h: [200, 280], s: [40, 70], l: [50, 70] },
     bgColorRanges: { h: [220, 280], s: [25, 50], l: [10, 20] },
     shapePool: [
-      { type: 'spirals', weight: 0.35 },
-      { type: 'circles', weight: 0.35 },
-      { type: 'waves', weight: 0.3 },
+      { type: 'spirals', weight: 0.3 },
+      { type: 'circles', weight: 0.25 },
+      { type: 'waves', weight: 0.25 },
+      { type: 'curves', weight: 0.2 },
     ],
     complexity: [4, 6],
     motionSpeed: [4, 6],
@@ -168,20 +183,20 @@ const moodToParams: Record<string, MoodParams> = {
 const styleShapeBoosts: Record<string, string[]> = {
   geometric: ['triangles', 'lines'],
   minimal: ['circles', 'lines'],
-  organic: ['waves', 'spirals', 'circles'],
-  abstract: ['spirals', 'triangles', 'waves'],
-  dreamy: ['waves', 'circles'],
+  organic: ['waves', 'spirals', 'circles', 'curves'],
+  abstract: ['spirals', 'triangles', 'waves', 'curves'],
+  dreamy: ['waves', 'circles', 'curves'],
 };
 
 const imageryShapeBoosts: Record<string, string[]> = {
-  ocean: ['waves', 'circles'],
+  ocean: ['waves', 'circles', 'curves'],
   sea: ['waves'],
-  forest: ['spirals', 'waves'],
+  forest: ['spirals', 'waves', 'curves'],
   city: ['lines', 'triangles'],
   storm: ['lines', 'triangles'],
-  night: ['circles', 'waves'],
+  night: ['circles', 'waves', 'curves'],
   fire: ['triangles', 'lines'],
-  sky: ['circles', 'spirals'],
+  sky: ['circles', 'spirals', 'curves'],
 };
 
 function hashKeyword(keyword: string): number[] {
@@ -245,6 +260,49 @@ function getSemanticScalars(semanticProfile?: SemanticProfile): {
     energy: clamp(semanticProfile?.energy ?? 0.5, 0, 1),
     valence: clamp(semanticProfile?.valence ?? 0, -1, 1),
     tempo: semanticProfile?.tempo ?? 'medium',
+  };
+}
+
+export function getMoodComplexityFloor(mood: string): number {
+  return CALM_MOOD_COMPLEXITY_FLOOR[mood.toLowerCase()] ?? 1;
+}
+
+function enforceCleanComposition(params: ArtParams): ArtParams {
+  let shapeTypes = params.shapeTypes.slice(0, MAX_SHAPE_TYPES);
+  if (shapeTypes.length === 0) {
+    shapeTypes = ['circles'];
+  }
+
+  const complexityFloor = getMoodComplexityFloor(params.mood);
+  let layerCount = clamp(params.layerCount, 1, MAX_LAYER_COUNT);
+  let complexity = clamp(params.complexity, complexityFloor, 10);
+
+  while (shapeTypes.length * layerCount * complexity > MAX_VISUAL_DENSITY) {
+    if (layerCount > 1) {
+      layerCount -= 1;
+      continue;
+    }
+
+    if (shapeTypes.length > 1) {
+      shapeTypes = shapeTypes.slice(0, shapeTypes.length - 1);
+      continue;
+    }
+
+    if (complexity > complexityFloor) {
+      complexity -= 1;
+      continue;
+    }
+
+    break;
+  }
+
+  return {
+    ...params,
+    shapeTypes,
+    layerCount,
+    complexity,
+    chaosLevel: clamp(params.chaosLevel, 1, MAX_CHAOS_LEVEL),
+    rotationVariance: clamp(params.rotationVariance, 0, MAX_ROTATION_VARIANCE),
   };
 }
 
@@ -620,7 +678,7 @@ function createBaseParams(
   const complexityShift = Math.round((energy - 0.5) * 2);
   const chaosShift = Math.round((energy - 0.5) * 3 - valence * 1.2);
 
-  return {
+  const baseParams: ArtParams = {
     seed,
     mood: normalizedMood,
     colors: shapeColors,
@@ -650,6 +708,12 @@ function createBaseParams(
     positionBias: kwProps.positionBias,
     strokeWidth: clamp(kwProps.strokeWidth + (energy > 0.8 ? 1 : 0), 1, 7),
     layerCount: kwProps.layerCount,
+  };
+
+  const cleanedParams = enforceCleanComposition(baseParams);
+  return {
+    ...cleanedParams,
+    complexity: Math.max(cleanedParams.complexity, getMoodComplexityFloor(normalizedMood)),
   };
 }
 
@@ -682,7 +746,7 @@ function applyControlledVariation(
     3
   );
 
-  return {
+  const variedParams: ArtParams = {
     ...baseParams,
     shapeTypes: selectShapeTypes(variedShapePool, shapeCount, variationSeed + 631),
     complexity: varyInt(baseParams.complexity, 1, 10, variationSeed, 101, strength, variationContext.optionIndex, 5),
@@ -696,6 +760,8 @@ function applyControlledVariation(
     strokeWidth: varyInt(baseParams.strokeWidth, 1, 7, variationSeed, 606, strength, variationContext.optionIndex, 3),
     layerCount: varyInt(baseParams.layerCount, 1, 3, variationSeed, 707, strength, variationContext.optionIndex, 2),
   };
+
+  return enforceCleanComposition(variedParams);
 }
 
 function resolveSeed(keyword: string | undefined, variationContext?: VariationContext): number {
