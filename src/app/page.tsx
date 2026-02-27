@@ -6,10 +6,8 @@ import Link from 'next/link';
 import {
   Activity,
   CheckCircle2,
-  Hash,
   Layers3,
   Palette,
-  SlidersHorizontal,
   Sparkles,
   Trash2,
 } from 'lucide-react';
@@ -151,6 +149,48 @@ function getStepStatus(
   return 'pending';
 }
 
+function resolveEffectiveLayout(params?: ArtParams | null): NonNullable<ArtParams['layoutAlgorithm']> {
+  if (!params) {
+    return 'legacy';
+  }
+
+  if (params.layoutAlgorithm) {
+    return params.layoutAlgorithm;
+  }
+
+  switch (params.renderAlgorithm) {
+    case 'flow-field-particles':
+      return 'flow-field';
+    case 'voronoi-gradients':
+      return 'voronoi';
+    case 'delaunay-depth-blur':
+      return 'delaunay';
+    case 'particles-attractors':
+      return 'attractors';
+    default:
+      return 'legacy';
+  }
+}
+
+function isLegacyLayout(layout: NonNullable<ArtParams['layoutAlgorithm']>): boolean {
+  return layout === 'legacy';
+}
+
+function getEffectiveGeometryLabel(layout: NonNullable<ArtParams['layoutAlgorithm']>): string {
+  switch (layout) {
+    case 'delaunay':
+      return 'triangulation';
+    case 'voronoi':
+      return 'voronoi cells';
+    case 'flow-field':
+      return 'particle paths';
+    case 'attractors':
+      return 'attractor particles';
+    default:
+      return 'shape primitives';
+  }
+}
+
 export default function Home() {
   const [keyword, setKeyword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -253,6 +293,8 @@ export default function Home() {
 
   const options = getPreviewOptions(preview);
   const activeOption = options.find((option) => option.optionId === selectedOptionId) ?? options[0] ?? null;
+  const activeLayout = resolveEffectiveLayout(activeOption?.artParams);
+  const effectiveGeometry = getEffectiveGeometryLabel(activeLayout);
 
   return (
     <div>
@@ -390,29 +432,14 @@ export default function Home() {
                 </div>
 
                 <div className="rounded-lg border bg-card/50 p-3 space-y-2">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-2">
-                    <Hash className="w-3.5 h-3.5" />
-                    Input & Identity
-                  </p>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Algorithm</p>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <p className="text-muted-foreground">Keyword</p>
-                    <p className="text-right truncate">{preview?.keyword ?? '-'}</p>
-                    <p className="text-muted-foreground">Mood</p>
-                    <p className="text-right capitalize">{preview?.mood ?? '-'}</p>
-                    <p className="text-muted-foreground">Option</p>
-                    <p className="text-right">{activeOption?.label ?? '-'}</p>
-                    <p className="text-muted-foreground">Seed</p>
-                    <p className="text-right">{activeOption?.artParams.seed ?? '-'}</p>
-                    <p className="text-muted-foreground">Layout</p>
-                    <p className="text-right text-xs leading-5">{activeOption?.artParams.layoutAlgorithm ?? '-'}</p>
-                    <p className="text-muted-foreground">Shape Style</p>
-                    <p className="text-right text-xs leading-5">{activeOption?.artParams.shapeStyle ?? '-'}</p>
-                    <p className="text-muted-foreground">Legacy Algorithm</p>
+                    <p className="text-muted-foreground">Render Algorithm</p>
                     <p className="text-right text-xs leading-5">{activeOption?.artParams.renderAlgorithm ?? 'legacy-shapes'}</p>
+                    <p className="text-muted-foreground">Layout</p>
+                    <p className="text-right text-xs leading-5 capitalize">{activeLayout}</p>
                     <p className="text-muted-foreground">Palette</p>
                     <p className="text-right text-xs leading-5">{activeOption?.artParams.paletteId ?? '-'}</p>
-                    <p className="text-muted-foreground">Variation</p>
-                    <p className="text-right text-xs leading-5">{activeOption?.meta?.variationSummary ?? '-'}</p>
                   </div>
                 </div>
 
@@ -422,8 +449,19 @@ export default function Home() {
                     Composition
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <p className="text-muted-foreground">Shape Types</p>
-                    <p className="text-right">{activeOption?.artParams.shapeTypes.join(', ') ?? '-'}</p>
+                    {isLegacyLayout(activeLayout) ? (
+                      <>
+                        <p className="text-muted-foreground">Shape Types</p>
+                        <p className="text-right">{activeOption?.artParams.shapeTypes.join(', ') ?? '-'}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-muted-foreground">Effective Geometry</p>
+                        <p className="text-right">{effectiveGeometry}</p>
+                        <p className="text-muted-foreground">Shape Style</p>
+                        <p className="text-right capitalize">{activeOption?.artParams.shapeStyle ?? '-'}</p>
+                      </>
+                    )}
                     <p className="text-muted-foreground">Complexity</p>
                     <p className="text-right">{activeOption ? formatValue(activeOption.artParams.complexity) : '-'}</p>
                     <p className="text-muted-foreground">Layers</p>
@@ -435,36 +473,9 @@ export default function Home() {
 
                 <div className="rounded-lg border bg-card/50 p-3 space-y-2">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-2">
-                    <SlidersHorizontal className="w-3.5 h-3.5" />
-                    Dynamics
-                  </p>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <p className="text-muted-foreground">Motion Speed</p>
-                    <p className="text-right">{activeOption ? formatValue(activeOption.artParams.motionSpeed) : '-'}</p>
-                    <p className="text-muted-foreground">Chaos Level</p>
-                    <p className="text-right">{activeOption ? formatValue(activeOption.artParams.chaosLevel) : '-'}</p>
-                    <p className="text-muted-foreground">Rotation Var.</p>
-                    <p className="text-right">{activeOption ? formatValue(activeOption.artParams.rotationVariance) : '-'}</p>
-                    <p className="text-muted-foreground">Size Curve</p>
-                    <p className="text-right">{activeOption ? formatValue(activeOption.artParams.sizeCurve) : '-'}</p>
-                    <p className="text-muted-foreground">Noise Field</p>
-                    <p className="text-right text-xs leading-5">
-                      {activeOption?.artParams.noisePlacement
-                        ? `s:${activeOption.artParams.noisePlacement.scale} st:${activeOption.artParams.noisePlacement.strength}`
-                        : '-'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border bg-card/50 p-3 space-y-2">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-2">
                     <Palette className="w-3.5 h-3.5" />
-                    Styling
+                    Colors
                   </p>
-                  <div className="grid grid-cols-2 gap-2 text-sm mb-2">
-                    <p className="text-muted-foreground">Stroke Width</p>
-                    <p className="text-right">{activeOption?.artParams.strokeWidth ?? '-'}</p>
-                  </div>
                   <div className="space-y-2">
                     <p className="text-xs text-muted-foreground">Shape Colors</p>
                     <div className="flex flex-wrap gap-1.5">
@@ -498,7 +509,7 @@ export default function Home() {
                 </div>
 
                 <div className="rounded-lg border bg-card/50 p-3 space-y-2">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Raw JSON</p>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Mood JSON</p>
                   <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-md border bg-muted/30 p-2 text-xs leading-5 text-foreground">
                     {preview?.debug?.rawModelJson
                       ? JSON.stringify(preview.debug.rawModelJson, null, 2)

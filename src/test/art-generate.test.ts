@@ -373,6 +373,84 @@ describe('POST /api/art/generate', () => {
     expect(data.options[1].artParams.seed).toBe(555555);
   });
 
+  it('returns parsed raw model JSON in debug when provider content is JSON-like text', async () => {
+    const { createMoodAnalyzer } = await import('@/lib/ai');
+    (createMoodAnalyzer as ReturnType<typeof vi.fn>).mockReturnValue({
+      extractMood: vi.fn().mockResolvedValue({
+        mood: 'serene',
+        confidence: 0.66,
+        semanticProfile: {
+          coreMood: 'serene',
+          energy: 0.3,
+          valence: 0.4,
+          tempo: 'calm',
+          imageryTags: ['sunset'],
+          styleHints: ['minimal'],
+          pipelinePath: 'direct-semantic',
+        },
+        rawResponse: {
+          choices: [
+            {
+              message: {
+                content:
+                  'Result:\n{"mood":"serene","confidence":0.66,"semanticProfile":{"coreMood":"serene","tempo":"calm"}}',
+              },
+            },
+          ],
+        },
+      }),
+    });
+
+    const handler = (await import('@/app/api/art/generate/route')).POST;
+    const request = new NextRequest('http://localhost/api/art/generate', {
+      method: 'POST',
+      body: JSON.stringify({ keyword: 'sunset' }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const response = await handler(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.debug.rawModelJson).toEqual({
+      mood: 'serene',
+      confidence: 0.66,
+      semanticProfile: {
+        coreMood: 'serene',
+        tempo: 'calm',
+      },
+    });
+  });
+
+  it('returns null rawModelJson when provider raw response is not valid JSON', async () => {
+    const { createMoodAnalyzer } = await import('@/lib/ai');
+    (createMoodAnalyzer as ReturnType<typeof vi.fn>).mockReturnValue({
+      extractMood: vi.fn().mockResolvedValue({
+        mood: 'serene',
+        rawResponse: {
+          content: [
+            {
+              text: 'analysis text without json',
+            },
+          ],
+        },
+      }),
+    });
+
+    const handler = (await import('@/app/api/art/generate/route')).POST;
+    const request = new NextRequest('http://localhost/api/art/generate', {
+      method: 'POST',
+      body: JSON.stringify({ keyword: 'sunset' }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const response = await handler(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.debug.rawModelJson).toBeNull();
+  });
+
   it('returns 400 when keyword is missing', async () => {
     const handler = (await import('@/app/api/art/generate/route')).POST;
 
