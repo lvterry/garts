@@ -160,7 +160,6 @@ const moodToParams: Record<string, MoodParams> = {
       { type: 'circles', weight: 0.4 },
       { type: 'waves', weight: 0.25 },
       { type: 'spirals', weight: 0.15 },
-      { type: 'curves', weight: 0.2 },
     ],
     complexity: [2, 4],
     motionSpeed: [1, 3],
@@ -196,7 +195,6 @@ const moodToParams: Record<string, MoodParams> = {
       { type: 'waves', weight: 0.4 },
       { type: 'circles', weight: 0.2 },
       { type: 'lines', weight: 0.15 },
-      { type: 'curves', weight: 0.25 },
     ],
     complexity: [3, 5],
     motionSpeed: [1, 3],
@@ -221,7 +219,6 @@ const moodToParams: Record<string, MoodParams> = {
       { type: 'circles', weight: 0.3 },
       { type: 'waves', weight: 0.2 },
       { type: 'spirals', weight: 0.3 },
-      { type: 'curves', weight: 0.2 },
     ],
     complexity: [4, 6],
     motionSpeed: [2, 4],
@@ -234,7 +231,6 @@ const moodToParams: Record<string, MoodParams> = {
       { type: 'waves', weight: 0.35 },
       { type: 'circles', weight: 0.25 },
       { type: 'spirals', weight: 0.2 },
-      { type: 'curves', weight: 0.2 },
     ],
     complexity: [2, 4],
     motionSpeed: [1, 3],
@@ -258,7 +254,6 @@ const moodToParams: Record<string, MoodParams> = {
     shapePool: [
       { type: 'waves', weight: 0.38 },
       { type: 'circles', weight: 0.34 },
-      { type: 'curves', weight: 0.28 },
     ],
     complexity: [3, 5],
     motionSpeed: [2, 4],
@@ -269,7 +264,6 @@ const moodToParams: Record<string, MoodParams> = {
     bgColorRanges: { h: [320, 359], s: [24, 52], l: [10, 20] },
     shapePool: [
       { type: 'circles', weight: 0.4 },
-      { type: 'curves', weight: 0.34 },
       { type: 'spirals', weight: 0.26 },
     ],
     complexity: [4, 6],
@@ -305,7 +299,6 @@ const moodToParams: Record<string, MoodParams> = {
     bgColorRanges: { h: [190, 300], s: [12, 32], l: [10, 18] },
     shapePool: [
       { type: 'waves', weight: 0.36 },
-      { type: 'curves', weight: 0.34 },
       { type: 'circles', weight: 0.3 },
     ],
     complexity: [2, 4],
@@ -318,7 +311,6 @@ const moodToParams: Record<string, MoodParams> = {
     shapePool: [
       { type: 'lines', weight: 0.4 },
       { type: 'triangles', weight: 0.34 },
-      { type: 'curves', weight: 0.26 },
     ],
     complexity: [5, 8],
     motionSpeed: [4, 7],
@@ -331,7 +323,6 @@ const moodToParams: Record<string, MoodParams> = {
       { type: 'spirals', weight: 0.3 },
       { type: 'circles', weight: 0.25 },
       { type: 'waves', weight: 0.25 },
-      { type: 'curves', weight: 0.2 },
     ],
     complexity: [4, 6],
     motionSpeed: [4, 6],
@@ -342,20 +333,20 @@ const moodToParams: Record<string, MoodParams> = {
 const styleShapeBoosts: Record<string, string[]> = {
   geometric: ['triangles', 'lines'],
   minimal: ['circles', 'lines'],
-  organic: ['waves', 'spirals', 'circles', 'curves'],
-  abstract: ['spirals', 'triangles', 'waves', 'curves'],
-  dreamy: ['waves', 'circles', 'curves'],
+  organic: ['waves', 'spirals', 'circles'],
+  abstract: ['spirals', 'triangles', 'waves'],
+  dreamy: ['waves', 'circles'],
 };
 
 const imageryShapeBoosts: Record<string, string[]> = {
-  ocean: ['waves', 'circles', 'curves'],
+  ocean: ['waves', 'circles'],
   sea: ['waves'],
-  forest: ['spirals', 'waves', 'curves'],
+  forest: ['spirals', 'waves'],
   city: ['lines', 'triangles'],
   storm: ['lines', 'triangles'],
-  night: ['circles', 'waves', 'curves'],
+  night: ['circles', 'waves'],
   fire: ['triangles', 'lines'],
-  sky: ['circles', 'spirals', 'curves'],
+  sky: ['circles', 'spirals'],
 };
 
 function hashKeyword(keyword: string): number[] {
@@ -775,6 +766,11 @@ function createBaseParams(
     1,
     10
   );
+  const baseMotionSpeed = clamp(
+    Math.round(randomInRange(hashSeed + 200, moodData.motionSpeed[0], moodData.motionSpeed[1]) * tempoBoost),
+    1,
+    10
+  );
   const algorithm = selectRenderAlgorithm(normalizedMood, semanticProfile, seed + hashSeed, 0);
 
   const baseParams: ArtParams = {
@@ -784,11 +780,7 @@ function createBaseParams(
     backgroundColors,
     shapeTypes,
     complexity: baseComplexity,
-    motionSpeed: clamp(
-      Math.round(randomInRange(hashSeed + 200, moodData.motionSpeed[0], moodData.motionSpeed[1]) * tempoBoost),
-      1,
-      10
-    ),
+    motionSpeed: baseMotionSpeed,
     chaosLevel: clamp(
       randomInRange(hashSeed + 300, moodData.chaosLevel[0], moodData.chaosLevel[1]) + chaosShift,
       1,
@@ -865,12 +857,22 @@ function applyControlledVariation(
     valence,
     imageryTags: semanticProfile?.imageryTags ?? [],
   });
+  const variedMotionSpeed = varyInt(
+    baseParams.motionSpeed,
+    1,
+    10,
+    variationSeed,
+    202,
+    strength,
+    variationContext.optionIndex,
+    5
+  );
 
   const variedParams: ArtParams = {
     ...baseParams,
     shapeTypes: selectShapeTypes(variedShapePool, shapeCount, variationSeed + 631),
     complexity: variedComplexity,
-    motionSpeed: varyInt(baseParams.motionSpeed, 1, 10, variationSeed, 202, strength, variationContext.optionIndex, 5),
+    motionSpeed: variedMotionSpeed,
     chaosLevel: varyInt(baseParams.chaosLevel, 1, 10, variationSeed, 303, strength, variationContext.optionIndex, 6),
     rotationVariance: varyInt(baseParams.rotationVariance, 0, 359, variationSeed, 404, strength, variationContext.optionIndex, 150),
     sizeCurve: Number(

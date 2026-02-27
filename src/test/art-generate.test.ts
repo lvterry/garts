@@ -32,7 +32,7 @@ describe('POST /api/art/generate', () => {
       mood: 'serene',
       colors: ['#a8d8ea'],
       backgroundColors: ['#112233'],
-      shapeTypes: ['curves'],
+      shapeTypes: ['waves'],
       complexity: 3,
       motionSpeed: 2,
       chaosLevel: 2,
@@ -71,7 +71,7 @@ describe('POST /api/art/generate', () => {
     expect(data.artParams).toHaveProperty('colors');
     expect(data.artParams).toHaveProperty('backgroundColors');
     expect(data.artParams).toHaveProperty('shapeTypes');
-    expect(data.artParams.shapeTypes).toContain('curves');
+    expect(data.artParams.shapeTypes).toContain('waves');
     expect(data.artParams).toHaveProperty('positionBias', 'center');
   });
 

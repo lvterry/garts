@@ -275,54 +275,6 @@ function renderLegacyShapesForType(
         break;
       }
 
-      case 'curves': {
-        const segmentCount = Math.max(2, Math.round(seededRandom(localSeed + 11, 2, 4 + complexity * 0.4)));
-        const span = size * (1.2 + sizeCurve * 1.8);
-        const direction = seededRandom(localSeed + 12, 0, 2 * Math.PI) + rotation;
-        const dx = Math.cos(direction);
-        const dy = Math.sin(direction);
-        const nx = -dy;
-        const ny = dx;
-
-        const startX = x - dx * (span / 2);
-        const startY = y - dy * (span / 2);
-
-        const segmentSpan = span / segmentCount;
-        const baseAmplitude = size * (0.25 + sizeCurve * 0.45);
-        const chaosAmplitude = chaos * 0.28;
-        let pathD = `M ${startX} ${startY}`;
-
-        for (let segment = 0; segment < segmentCount; segment++) {
-          const progress = segment + 1;
-          const endX = startX + dx * (segmentSpan * progress);
-          const endY = startY + dy * (segmentSpan * progress);
-
-          const baseOffset = Math.sin((segment + 1) * 1.25 + seededRandom(localSeed + 18, 0, Math.PI)) * baseAmplitude;
-          const jitter1 = (seededNoise(localSeed + 21, segment + 1, layerIndex + 1) - 0.5) * chaosAmplitude * size;
-          const jitter2 = (seededNoise(localSeed + 31, segment + 1, layerIndex + 7) - 0.5) * chaosAmplitude * size;
-
-          const c1x = startX + dx * (segmentSpan * segment + segmentSpan * 0.35) + nx * (baseOffset + jitter1);
-          const c1y = startY + dy * (segmentSpan * segment + segmentSpan * 0.35) + ny * (baseOffset + jitter1);
-          const c2x = startX + dx * (segmentSpan * segment + segmentSpan * 0.7) - nx * (baseOffset * 0.8 + jitter2);
-          const c2y = startY + dy * (segmentSpan * segment + segmentSpan * 0.7) - ny * (baseOffset * 0.8 + jitter2);
-
-          pathD += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${endX} ${endY}`;
-        }
-
-        const sw = seededRandom(localSeed + 41, 1, Math.max(1.2, strokeWidth + 0.4));
-        elements.push(
-          <path
-            key={`curve-${i}-l${layerIndex}`}
-            d={pathD}
-            stroke={hexToRgb(color)}
-            strokeWidth={sw}
-            fill="none"
-            opacity={opacity * layerOpacity}
-          />
-        );
-        break;
-      }
-
       default:
         break;
     }
@@ -332,7 +284,7 @@ function renderLegacyShapesForType(
 }
 
 function renderLegacy(params: ArtParams, width: number, height: number): RendererResult {
-  const shapeLayerOrder = ['waves', 'curves', 'circles', 'spirals', 'triangles', 'lines'];
+  const shapeLayerOrder = ['waves', 'circles', 'spirals', 'triangles', 'lines'];
   const sortedShapes = [...params.shapeTypes].sort((a, b) =>
     shapeLayerOrder.indexOf(a) - shapeLayerOrder.indexOf(b)
   );

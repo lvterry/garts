@@ -382,3 +382,68 @@ Improve generation quality with curated palettes, noise-driven placement, and cl
   - `npm test`: pass (27/27)
   - `npx tsc --noEmit`: pass
   - `npm run lint`: pass with one existing warning in `src/app/layout.tsx` (`@next/next/no-page-custom-font`)
+
+# Curve Generation Optimization (2026-02-27)
+
+## Goal
+Upgrade legacy `curves` generation with deterministic flow-field/attractor strategies, depth-based styling, and curve diagnostics while keeping existing renderer modes unchanged.
+
+## Action Items
+- [x] Extend `ArtParams` with additive optional `curveConfig` controls and keep backward compatibility defaults.
+- [x] Add reusable curve simulation/smoothing/depth mapping utilities in renderer utils.
+- [x] Refactor legacy `curves` rendering into mode-based strategies (`legacy-bezier`, `topographical-flow`, `attractor-flow`).
+- [x] Implement atmospheric curve depth styling for stroke width/opacity/color and depth-aware paint ordering.
+- [x] Add static pulse dash styling (`subtle-pulse`) without runtime animation.
+- [x] Add generator-side `curveConfig` generation + controlled variation and include `curveConfig` in option-distance/summary.
+- [x] Update generation inspector to show curve mode/depth diagnostics.
+- [x] Add tests for curve utility determinism/bounds/smoothing/depth and generator bounds/bias behavior.
+- [x] Run validation (`npm test`, `npx tsc --noEmit`, `npm run lint`).
+
+## Review
+- Status: Implemented
+- Files changed:
+  - `src/components/SvgArtCanvas.tsx`
+  - `src/components/renderers/utils.ts`
+  - `src/lib/art-generator/index.ts`
+  - `src/app/page.tsx`
+  - `src/test/art-generator-variation.test.ts`
+  - `src/test/svg-art-canvas.test.ts`
+  - `src/test/curve-renderer-utils.test.ts`
+  - `tasks/todo.md`
+- Validation:
+  - `npm test -- src/test/curve-renderer-utils.test.ts src/test/art-generator-variation.test.ts src/test/svg-art-canvas.test.ts`: pass
+  - `npm test`: pass (32/32)
+  - `npx tsc --noEmit`: pass
+  - `npm run lint`: pass with one existing warning in `src/app/layout.tsx` (`@next/next/no-page-custom-font`)
+
+# Remove Curves Shape (2026-02-27)
+
+## Goal
+Fully remove `curves` from the shape system (generation + rendering + tests) without legacy compatibility.
+
+## Action Items
+- [x] Remove `CurveConfig` and `curveConfig` from `ArtParams` in renderer and generator types.
+- [x] Remove `curves` rendering branch and depth-sort logic from `SvgArtCanvas` legacy renderer.
+- [x] Remove curve-only simulation/smoothing/depth helpers from renderer utils.
+- [x] Remove all curve-related generation/variation/distance/summarization logic from art generator.
+- [x] Remove `curves` entries from mood shape pools and semantic boost maps.
+- [x] Remove curve diagnostics from homepage inspector.
+- [x] Update tests to stop asserting curve presence and assert no `curves` output.
+- [x] Delete curve-only test file.
+- [x] Run full verification (`npm test`, `npx tsc --noEmit`, `npm run lint`).
+
+## Review
+- Status: Implemented
+- Files changed:
+  - `src/components/SvgArtCanvas.tsx`
+  - `src/components/renderers/utils.ts`
+  - `src/lib/art-generator/index.ts`
+  - `src/app/page.tsx`
+  - `src/test/art-generator-variation.test.ts`
+  - `src/test/art-generate.test.ts`
+  - `src/test/curve-renderer-utils.test.ts` (deleted)
+  - `tasks/todo.md`
+- Validation:
+  - `npm test`: pass (27/27)
+  - `npx tsc --noEmit`: pass
+  - `npm run lint`: pass with one existing warning in `src/app/layout.tsx` (`@next/next/no-page-custom-font`)

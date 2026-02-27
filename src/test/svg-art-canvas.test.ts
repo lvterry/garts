@@ -6,6 +6,7 @@ describe('SvgArtCanvas wave path floor', () => {
     expect(getWavePathCount('serene', 1)).toBe(2);
     expect(getWavePathCount('peaceful', 1)).toBe(2);
     expect(getWavePathCount('melancholic', 1)).toBe(2);
+    expect(getWavePathCount('Serene', 1)).toBe(2);
   });
 
   it('keeps requested complexity for non-calm moods', () => {

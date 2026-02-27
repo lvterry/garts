@@ -20,12 +20,6 @@ const semanticProfile: SemanticProfile = {
   pipelinePath: 'direct-semantic',
 };
 
-const curveBoostedSemanticProfile: SemanticProfile = {
-  ...semanticProfile,
-  styleHints: ['organic', 'dreamy'],
-  imageryTags: ['ocean', 'sky'],
-};
-
 function buildContext(optionIndex: number, strength: number, baseSeed = 424242): VariationContext {
   return {
     optionIndex,
@@ -97,6 +91,7 @@ describe('art-generator controlled variation', () => {
     expect(params.rotationVariance).toBeLessThanOrEqual(220);
     expect(params.shapeTypes.length * params.layerCount * params.complexity).toBeLessThanOrEqual(14);
     expect(['center', 'edge', 'uniform']).toContain(params.positionBias);
+    expect(params.shapeTypes).not.toContain('curves');
   });
 
   it('is deterministic for same variation context', () => {
@@ -120,9 +115,10 @@ describe('art-generator controlled variation', () => {
     expect(params.noisePlacement?.octaves).toBeLessThanOrEqual(6);
     expect(params.algorithmConfig?.particleCount).toBeGreaterThanOrEqual(70);
     expect(params.algorithmConfig?.siteCount).toBeGreaterThanOrEqual(24);
+    expect(params.shapeTypes).not.toContain('curves');
   });
 
-  it('increases curve selection with semantic hints that favor curves', () => {
+  it('never selects curves in shapeTypes', () => {
     const keywords = [
       'ocean breeze',
       'night sky',
@@ -135,15 +131,10 @@ describe('art-generator controlled variation', () => {
     ];
 
     const seededContexts = keywords.map((_, idx) => buildContext(1, 0.8, 101000 + idx * 97));
-    const plainCurveCount = seededContexts
+    const hasCurves = seededContexts
       .map((context, idx) => generateArtParams('serene', keywords[idx], semanticProfile, context))
-      .filter((params) => params.shapeTypes.includes('curves')).length;
+      .some((params) => params.shapeTypes.includes('curves'));
 
-    const boostedCurveCount = seededContexts
-      .map((context, idx) => generateArtParams('serene', keywords[idx], curveBoostedSemanticProfile, context))
-      .filter((params) => params.shapeTypes.includes('curves')).length;
-
-    expect(boostedCurveCount).toBeGreaterThan(plainCurveCount);
-    expect(boostedCurveCount).toBeGreaterThan(0);
+    expect(hasCurves).toBe(false);
   });
 });
