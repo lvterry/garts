@@ -6,15 +6,15 @@ describe('Generation Inspector structure', () => {
   const pagePath = path.resolve(process.cwd(), 'src/app/page.tsx');
   const source = readFileSync(pagePath, 'utf8');
 
-  it('keeps only four target inspector sections', () => {
+  it('keeps only three target inspector sections', () => {
     expect(source).toContain('Algorithm');
     expect(source).toContain('Composition');
-    expect(source).toContain('Colors');
     expect(source).toContain('Mood JSON');
 
     expect(source).not.toContain('Input & Identity');
     expect(source).not.toContain('Dynamics');
     expect(source).not.toContain('Styling');
+    expect(source).not.toContain('Colors');
   });
 
   it('shows composition fields by effective layout semantics', () => {

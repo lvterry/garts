@@ -7,7 +7,6 @@ import {
   Activity,
   CheckCircle2,
   Layers3,
-  Palette,
   Sparkles,
   Trash2,
 } from 'lucide-react';
@@ -468,43 +467,6 @@ export default function Home() {
                     <p className="text-right">{activeOption?.artParams.layerCount ?? '-'}</p>
                     <p className="text-muted-foreground">Position Bias</p>
                     <p className="text-right capitalize">{activeOption?.artParams.positionBias ?? '-'}</p>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border bg-card/50 p-3 space-y-2">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-2">
-                    <Palette className="w-3.5 h-3.5" />
-                    Colors
-                  </p>
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">Shape Colors</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {(activeOption?.artParams.colors ?? []).map((color) => (
-                        <span
-                          key={color}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded border"
-                        >
-                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                          {color}
-                        </span>
-                      ))}
-                      {!activeOption && <span className="text-xs text-muted-foreground">-</span>}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">Background Colors</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {(activeOption?.artParams.backgroundColors ?? []).map((color) => (
-                        <span
-                          key={color}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded border"
-                        >
-                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                          {color}
-                        </span>
-                      ))}
-                      {!activeOption && <span className="text-xs text-muted-foreground">-</span>}
-                    </div>
                   </div>
                 </div>
 
