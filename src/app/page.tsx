@@ -317,7 +317,7 @@ export default function Home() {
             disabled={loading}
             className="h-10"
           />
-          <Button type="submit" disabled={loading || !keyword.trim()}>
+          <Button type="submit" disabled={loading || !keyword.trim()} className="h-10">
             {loading ? 'Generating...' : 'Generate'}
           </Button>
         </form>
@@ -328,7 +328,7 @@ export default function Home() {
       {(loading || preview) && (
         <section className="max-w-6xl mx-auto mb-12">
           <div className="grid gap-6 lg:grid-cols-[1.15fr,0.85fr]">
-            <Card className="border-primary/30 shadow-sm">
+            <Card className="border-border/60">
               <CardContent className="p-5 md:p-6">
                 <div className="flex items-center justify-between gap-4 mb-5">
                   <div>
