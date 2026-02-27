@@ -1,7 +1,4 @@
-export type PaletteFamily =
-  | 'coolors-inspired'
-  | 'chromotome-inspired'
-  | 'generativepalettes-inspired';
+import type { PaletteFamily } from '@/lib/art/types';
 
 export interface CuratedPalette {
   id: string;

@@ -4,47 +4,10 @@ import { renderDelaunayDepthBlur } from '@/components/renderers/delaunayDepthBlu
 import { renderFlowFieldParticles } from '@/components/renderers/flowFieldParticles';
 import { renderParticlesAttractors } from '@/components/renderers/particlesAttractors';
 import { renderVoronoiGradients } from '@/components/renderers/voronoiGradients';
+import { hexToRgb, seededRandom } from '@/components/renderers/utils';
 import type { RendererResult } from '@/components/renderers/types';
-
-export interface ArtParams {
-  seed: number;
-  mood: string;
-  colors: string[];
-  backgroundColors: string[];
-  shapeTypes: string[];
-  complexity: number;
-  motionSpeed: number;
-  chaosLevel: number;
-  rotationVariance: number;
-  sizeCurve: number;
-  positionBias: 'center' | 'edge' | 'uniform';
-  strokeWidth: number;
-  layerCount: number;
-  renderAlgorithm?:
-    | 'flow-field-particles'
-    | 'voronoi-gradients'
-    | 'delaunay-depth-blur'
-    | 'particles-attractors'
-    | 'legacy-shapes';
-  layoutAlgorithm?: 'flow-field' | 'voronoi' | 'delaunay' | 'attractors' | 'legacy';
-  shapeStyle?: 'linework' | 'point-cloud' | 'mesh';
-  paletteId?: string;
-  paletteFamily?: 'coolors-inspired' | 'chromotome-inspired' | 'generativepalettes-inspired';
-  noisePlacement?: {
-    scale: number;
-    strength: number;
-    octaves: number;
-    lacunarity: number;
-    gain: number;
-  };
-  algorithmConfig?: {
-    particleCount?: number;
-    stepCount?: number;
-    siteCount?: number;
-    attractorCount?: number;
-    blurLayers?: number;
-  };
-}
+import { isLegacyLayout, resolveLayoutAlgorithm } from '@/lib/art/layout';
+import type { ArtParams } from '@/lib/art/types';
 
 interface SvgArtCanvasProps {
   params: ArtParams;
@@ -55,24 +18,9 @@ interface SvgArtCanvasProps {
 const DEFAULT_SIZE = 500;
 const CALM_MOODS = new Set(['serene', 'peaceful', 'melancholic']);
 
-function seededRandom(seed: number, min: number, max: number): number {
-  const x = Math.sin(seed) * 10000;
-  const fraction = x - Math.floor(x);
-  return min + fraction * (max - min);
-}
-
 function seededNoise(seed: number, x: number, y: number = 0): number {
   const n = Math.sin(seed * 12.9898 + x * 78.233 + y * 43.758) * 43758.5453;
   return n - Math.floor(n);
-}
-
-function hexToRgb(hex: string): string {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result) return 'rgba(0,0,0,0.5)';
-  const r = parseInt(result[1], 16);
-  const g = parseInt(result[2], 16);
-  const b = parseInt(result[3], 16);
-  return `rgb(${r},${g},${b})`;
 }
 
 function getPosition(
@@ -318,32 +266,13 @@ function renderByAlgorithm(params: ArtParams, width: number, height: number): Re
   }
 }
 
-function resolveLayoutAlgorithm(params: ArtParams): NonNullable<ArtParams['layoutAlgorithm']> {
-  if (params.layoutAlgorithm) {
-    return params.layoutAlgorithm;
-  }
-
-  switch (params.renderAlgorithm) {
-    case 'flow-field-particles':
-      return 'flow-field';
-    case 'voronoi-gradients':
-      return 'voronoi';
-    case 'delaunay-depth-blur':
-      return 'delaunay';
-    case 'particles-attractors':
-      return 'attractors';
-    default:
-      return 'legacy';
-  }
-}
-
 export default function SvgArtCanvas({ params }: SvgArtCanvasProps) {
   const width = DEFAULT_SIZE;
   const height = DEFAULT_SIZE;
   const bgColor = params.backgroundColors?.[0] || '#0a0a12';
 
   const mode = resolveLayoutAlgorithm(params);
-  const renderResult = mode === 'legacy'
+  const renderResult = isLegacyLayout(mode)
     ? renderLegacy(params, width, height)
     : renderByAlgorithm(params, width, height);
 

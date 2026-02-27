@@ -480,3 +480,60 @@ Decouple layout strategy from shape style so the same layout can combine with di
   - `npm test -- src/test/art-generator-variation.test.ts src/test/svg-art-canvas.test.ts src/test/art-generate.test.ts`: pass
   - `npx tsc --noEmit`: pass
   - `npm run lint`: pass with one existing warning in `src/app/layout.tsx` (`@next/next/no-page-custom-font`)
+
+# Refactor Consolidation (2026-02-27)
+
+## Goal
+Implement low-risk structural refactor for single-source art types/layout mapping, generator module decomposition, typed frontend API client, and homepage container decomposition while preserving API/UI behavior.
+
+## Action Items
+- [x] Add shared art domain types at `src/lib/art/types.ts` and migrate all consumers.
+- [x] Add shared layout mapping utilities at `src/lib/art/layout.ts` and remove duplicated mapping logic.
+- [x] Split generator logic into focused modules:
+  - [x] `src/lib/art-generator/config.ts`
+  - [x] `src/lib/art-generator/base.ts`
+  - [x] `src/lib/art-generator/variation.ts`
+  - [x] `src/lib/art-generator/distance.ts`
+  - [x] Keep `src/lib/art-generator/index.ts` as orchestration/re-export layer.
+- [x] Remove unused legacy color-range config from generator mood config.
+- [x] Remove duplicate `ArtParams` and layout resolver from `SvgArtCanvas` and consume shared domain/layout modules.
+- [x] Add typed frontend API client (`src/lib/api/art-client.ts`) and shared API types (`src/lib/api/types.ts`).
+- [x] Migrate home/gallery/detail pages to typed API client usage.
+- [x] Split homepage into focused components:
+  - [x] `src/components/home/GenerateForm.tsx`
+  - [x] `src/components/home/OptionComparePanel.tsx`
+  - [x] `src/components/home/GenerationInspector.tsx`
+  - [x] `src/components/home/RecentArtworks.tsx`
+- [x] Add tests for mapping roundtrip, ArtParams compatibility, and art-client success/error handling.
+
+## Review
+- Status: Implemented
+- Files added:
+  - `src/lib/art/types.ts`
+  - `src/lib/art/layout.ts`
+  - `src/lib/art-generator/config.ts`
+  - `src/lib/art-generator/base.ts`
+  - `src/lib/art-generator/variation.ts`
+  - `src/lib/art-generator/distance.ts`
+  - `src/lib/api/types.ts`
+  - `src/lib/api/art-client.ts`
+  - `src/components/home/GenerateForm.tsx`
+  - `src/components/home/OptionComparePanel.tsx`
+  - `src/components/home/GenerationInspector.tsx`
+  - `src/components/home/RecentArtworks.tsx`
+  - `src/test/layout-mapping.test.ts`
+  - `src/test/art-params-compat.test.ts`
+  - `src/test/art-client.test.ts`
+- Core files refactored:
+  - `src/lib/art-generator/index.ts`
+  - `src/components/SvgArtCanvas.tsx`
+  - `src/app/page.tsx`
+  - `src/app/gallery/page.tsx`
+  - `src/app/art/[id]/page.tsx`
+  - `src/components/renderers/types.ts`
+  - `src/lib/art-generator/palettes.ts`
+  - `src/test/page-inspector.test.ts`
+  - `src/test/setup.ts`
+- Validation:
+  - `npx tsc --noEmit`: pass
+  - `npm test`: pass (37/37)

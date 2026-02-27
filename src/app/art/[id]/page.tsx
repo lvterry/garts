@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import type { ArtParams } from '@/components/SvgArtCanvas';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import type { ArtworkData } from '@/lib/api/types';
+import { deleteArtwork, getArtwork } from '@/lib/api/art-client';
 
 const SvgArtCanvas = dynamic(() => import('@/components/SvgArtCanvas'), {
   ssr: false,
@@ -17,14 +18,6 @@ const SvgArtCanvas = dynamic(() => import('@/components/SvgArtCanvas'), {
     </div>
   ),
 });
-
-interface ArtworkData {
-  id: string;
-  keyword: string;
-  mood: string;
-  artData: ArtParams;
-  createdAt: string;
-}
 
 export default function ArtDetailPage() {
   const params = useParams();
@@ -39,9 +32,7 @@ export default function ArtDetailPage() {
   useEffect(() => {
     async function fetchArtwork() {
       try {
-        const response = await fetch(`/api/art/${id}`);
-        if (!response.ok) throw new Error('Not found');
-        const data = await response.json();
+        const data = await getArtwork(id);
         setArtwork(data);
       } catch {
         setError('Artwork not found');
@@ -57,8 +48,7 @@ export default function ArtDetailPage() {
 
     setDeleting(true);
     try {
-      const response = await fetch(`/api/art/${id}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error('Failed to delete');
+      await deleteArtwork(id);
       router.push('/gallery');
     } catch {
       alert('Failed to delete artwork');
@@ -84,9 +74,7 @@ export default function ArtDetailPage() {
   return (
     <div className="max-w-3xl mx-auto">
       <Button variant="ghost" asChild className="mb-6">
-        <Link href="/gallery">
-          ← Back to Gallery
-        </Link>
+        <Link href="/gallery">← Back to Gallery</Link>
       </Button>
 
       <div className="grid md:grid-cols-[1fr_280px] gap-12">
@@ -121,12 +109,7 @@ export default function ArtDetailPage() {
               <p className="font-medium text-muted-foreground capitalize">{artwork.artData.shapeTypes.join(', ')}</p>
             </div>
 
-            <Button
-              onClick={handleDelete}
-              disabled={deleting}
-              variant="destructive"
-              className="w-full mt-6"
-            >
+            <Button onClick={handleDelete} disabled={deleting} variant="destructive" className="w-full mt-6">
               {deleting ? 'Deleting...' : 'Delete'}
             </Button>
           </CardContent>

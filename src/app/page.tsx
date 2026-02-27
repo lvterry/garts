@@ -1,109 +1,12 @@
 'use client';
 
 import { type FormEvent, useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
-import Link from 'next/link';
-import {
-  Activity,
-  CheckCircle2,
-  Layers3,
-  Sparkles,
-  Trash2,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { ArtParams } from '@/components/SvgArtCanvas';
-
-const SvgArtCanvas = dynamic(() => import('@/components/SvgArtCanvas'), {
-  ssr: false,
-  loading: () => (
-    <div className="aspect-square bg-secondary rounded-xl flex items-center justify-center">
-      Loading...
-    </div>
-  ),
-});
-
-interface PreviewData {
-  keyword: string;
-  mood: string;
-  artParams: ArtParams;
-  options?: PreviewOption[];
-  debug?: {
-    confidence?: number | null;
-    semanticProfile?: Record<string, unknown> | null;
-    pipelinePath?: 'direct-semantic' | 'expand-then-extract';
-    rawModelJson?: Record<string, unknown> | null;
-  };
-}
-
-interface PreviewOption {
-  optionId: string;
-  label: string;
-  artParams: ArtParams;
-  meta?: {
-    optionDistance?: number;
-    variationSummary?: string;
-  };
-}
-
-interface ArtworkData {
-  id: string;
-  keyword: string;
-  mood: string;
-  artData: ArtParams;
-  createdAt: string;
-}
-
-type StageStatus = 'pending' | 'active' | 'done';
-
-const GENERATION_STEPS = [
-  {
-    label: 'Analyze mood',
-    description: 'Interpreting your keyword and mapping mood signal.',
-  },
-  {
-    label: 'Build parameters',
-    description: 'Deriving deterministic artwork controls.',
-  },
-  {
-    label: 'Render preview',
-    description: 'Drawing shapes and colors from generated params.',
-  },
-] as const;
-
-async function generateArt(keyword: string): Promise<PreviewData> {
-  const response = await fetch('/api/art/generate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ keyword, optionCount: 2 }),
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to generate art');
-  }
-
-  return response.json();
-}
-
-async function saveArt(data: { keyword: string; mood: string; artParams: ArtParams }) {
-  const response = await fetch('/api/art/save', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      keyword: data.keyword,
-      mood: data.mood,
-      artData: data.artParams,
-      format: 'svg',
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to save art');
-  }
-
-  return response.json();
-}
+import type { PreviewData, PreviewOption, ArtworkData } from '@/lib/api/types';
+import { deleteArtwork, generateArt, listArtworks, saveArt } from '@/lib/api/art-client';
+import { GenerateForm } from '@/components/home/GenerateForm';
+import { GenerationInspector } from '@/components/home/GenerationInspector';
+import { OptionComparePanel } from '@/components/home/OptionComparePanel';
+import { RecentArtworks } from '@/components/home/RecentArtworks';
 
 function getPreviewOptions(preview: PreviewData | null): PreviewOption[] {
   if (!preview) {
@@ -123,73 +26,6 @@ function getPreviewOptions(preview: PreviewData | null): PreviewOption[] {
   ];
 }
 
-function formatValue(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(2);
-}
-
-function getStepStatus(
-  index: number,
-  currentStep: number,
-  loading: boolean,
-  hasPreview: boolean
-): StageStatus {
-  if (hasPreview && !loading) {
-    return 'done';
-  }
-
-  if (index === currentStep) {
-    return 'active';
-  }
-
-  if (index < currentStep) {
-    return 'done';
-  }
-
-  return 'pending';
-}
-
-function resolveEffectiveLayout(params?: ArtParams | null): NonNullable<ArtParams['layoutAlgorithm']> {
-  if (!params) {
-    return 'legacy';
-  }
-
-  if (params.layoutAlgorithm) {
-    return params.layoutAlgorithm;
-  }
-
-  switch (params.renderAlgorithm) {
-    case 'flow-field-particles':
-      return 'flow-field';
-    case 'voronoi-gradients':
-      return 'voronoi';
-    case 'delaunay-depth-blur':
-      return 'delaunay';
-    case 'particles-attractors':
-      return 'attractors';
-    default:
-      return 'legacy';
-  }
-}
-
-function isLegacyLayout(layout: NonNullable<ArtParams['layoutAlgorithm']>): boolean {
-  return layout === 'legacy';
-}
-
-function getEffectiveGeometryLabel(layout: NonNullable<ArtParams['layoutAlgorithm']>): string {
-  switch (layout) {
-    case 'delaunay':
-      return 'triangulation';
-    case 'voronoi':
-      return 'voronoi cells';
-    case 'flow-field':
-      return 'particle paths';
-    case 'attractors':
-      return 'attractor particles';
-    default:
-      return 'shape primitives';
-  }
-}
-
 export default function Home() {
   const [keyword, setKeyword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -205,9 +41,7 @@ export default function Home() {
   useEffect(() => {
     async function fetchArtworks() {
       try {
-        const response = await fetch('/api/art?limit=6');
-        if (!response.ok) throw new Error('Failed to fetch');
-        const data = await response.json();
+        const data = await listArtworks({ limit: 6 });
         setArtworks(data.artworks);
       } catch (err) {
         console.error(err);
@@ -215,6 +49,7 @@ export default function Home() {
         setGalleryLoading(false);
       }
     }
+
     fetchArtworks();
   }, []);
 
@@ -242,13 +77,13 @@ export default function Home() {
     setSavedId(null);
 
     try {
-      const art = await generateArt(keyword.trim());
+      const art = await generateArt(keyword.trim(), 2);
       setPreview(art);
       const options = getPreviewOptions(art);
       setSelectedOptionId(options[0]?.optionId ?? null);
       setKeyword('');
-    } catch {
-      setError('Failed to generate art. Please try again.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate art. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -269,11 +104,10 @@ export default function Home() {
         artParams: activeOption.artParams,
       });
       setSavedId(result.id);
-      const response = await fetch('/api/art?limit=6');
-      const data = await response.json();
+      const data = await listArtworks({ limit: 6 });
       setArtworks(data.artworks);
-    } catch {
-      setError('Failed to save art. Please try again.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save art. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -283,8 +117,8 @@ export default function Home() {
     if (!confirm('Are you sure you want to delete this artwork?')) return;
 
     try {
-      await fetch(`/api/art/${id}`, { method: 'DELETE' });
-      setArtworks(artworks.filter((a) => a.id !== id));
+      await deleteArtwork(id);
+      setArtworks((prev) => prev.filter((a) => a.id !== id));
     } catch {
       alert('Failed to delete artwork');
     }
@@ -292,242 +126,47 @@ export default function Home() {
 
   const options = getPreviewOptions(preview);
   const activeOption = options.find((option) => option.optionId === selectedOptionId) ?? options[0] ?? null;
-  const activeLayout = resolveEffectiveLayout(activeOption?.artParams);
-  const effectiveGeometry = getEffectiveGeometryLabel(activeLayout);
 
   return (
     <div>
       <section className="text-center max-w-2xl mx-auto mb-10">
-        <h1 className="text-4xl font-semibold tracking-tight mb-3 text-foreground">
-          Generative Art from Your Mood
-        </h1>
-        <p className="text-gray-400">
-          Enter a keyword and inspect how AI parameters shape your artwork
-        </p>
+        <h1 className="text-4xl font-semibold tracking-tight mb-3 text-foreground">Generative Art from Your Mood</h1>
+        <p className="text-gray-400">Enter a keyword and inspect how AI parameters shape your artwork</p>
       </section>
 
-      <section className="flex justify-center mb-12">
-        <form onSubmit={handleGenerate} className="flex gap-2 w-full max-w-md">
-          <Input
-            type="text"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            placeholder="Enter a keyword..."
-            disabled={loading}
-            className="h-10"
-          />
-          <Button type="submit" disabled={loading || !keyword.trim()} className="h-10">
-            {loading ? 'Generating...' : 'Generate'}
-          </Button>
-        </form>
-      </section>
+      <GenerateForm
+        keyword={keyword}
+        loading={loading}
+        onKeywordChange={setKeyword}
+        onSubmit={handleGenerate}
+      />
 
       {error && <p className="text-center text-destructive mb-6">{error}</p>}
 
       {(loading || preview) && (
         <section className="max-w-6xl mx-auto mb-12">
           <div className="grid gap-6 lg:grid-cols-[1.15fr,0.85fr]">
-            <Card className="border-border/60">
-              <CardContent className="p-5 md:p-6">
-                <div className="flex items-center justify-between gap-4 mb-5">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Compare Options</p>
-                    <p className="text-sm">
-                      {preview ? (
-                        <>
-                          <span className="font-semibold text-foreground">{preview.keyword}</span>
-                          {' -> '}
-                          <span className="capitalize text-muted-foreground">{preview.mood}</span>
-                        </>
-                      ) : (
-                        <span className="text-muted-foreground">Generating a new artwork...</span>
-                      )}
-                    </p>
-                    {activeOption && (
-                      <p className="text-xs text-muted-foreground mt-1">Selected: {activeOption.label}</p>
-                    )}
-                  </div>
-                  <Sparkles className="w-5 h-5 text-primary" />
-                </div>
-
-                {loading ? (
-                  <div className="grid gap-3 sm:grid-cols-2 animate-pulse">
-                    <div className="aspect-square bg-secondary rounded-xl w-full" />
-                    <div className="aspect-square bg-secondary rounded-xl w-full" />
-                  </div>
-                ) : (
-                  preview && (
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {options.map((option) => {
-                        const isSelected = option.optionId === selectedOptionId;
-
-                        return (
-                          <button
-                            key={option.optionId}
-                            type="button"
-                            aria-pressed={isSelected}
-                            onClick={() => setSelectedOptionId(option.optionId)}
-                            className={`text-left rounded-xl border overflow-hidden transition-all ${
-                              isSelected
-                                ? 'border-primary shadow-[0_0_0_2px_hsl(var(--primary)/0.18)]'
-                                : 'border-border hover:border-primary/40'
-                            }`}
-                          >
-                            <div className="aspect-square w-full">
-                              <SvgArtCanvas params={option.artParams} />
-                            </div>
-                            <div className="px-3 py-2 border-t bg-card/80 flex items-center justify-between">
-                              <span className="text-xs font-medium">{option.label}</span>
-                              {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-primary" />}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )
-                )}
-
-                <div className="text-center mt-6">
-                  {savedId ? (
-                    <Button asChild>
-                      <Link href={`/art/${savedId}`}>View in Gallery</Link>
-                    </Button>
-                  ) : (
-                    <Button onClick={handleSave} disabled={saving || loading || !activeOption}>
-                      {saving ? 'Saving...' : 'Save to Gallery'}
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-border/60">
-              <CardContent className="p-5 md:p-6 space-y-5">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold tracking-tight">Generation Inspector</h3>
-                  <Activity className="w-5 h-5 text-muted-foreground" />
-                </div>
-
-                <div className="space-y-2">
-                  {GENERATION_STEPS.map((step, index) => {
-                    const status = getStepStatus(index, stepIndex, loading, Boolean(preview));
-                    const dotClass =
-                      status === 'done'
-                        ? 'bg-primary'
-                        : status === 'active'
-                          ? 'bg-primary/70 animate-pulse'
-                          : 'bg-muted';
-
-                    return (
-                      <div key={step.label} className="flex items-start gap-3">
-                        <span className={`mt-1 w-2.5 h-2.5 rounded-full ${dotClass}`} />
-                        <div>
-                          <p className="text-sm font-medium">{step.label}</p>
-                          <p className="text-xs text-muted-foreground">{step.description}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="rounded-lg border bg-card/50 p-3 space-y-2">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Algorithm</p>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <p className="text-muted-foreground">Render Algorithm</p>
-                    <p className="text-right text-xs leading-5">{activeOption?.artParams.renderAlgorithm ?? 'legacy-shapes'}</p>
-                    <p className="text-muted-foreground">Layout</p>
-                    <p className="text-right text-xs leading-5 capitalize">{activeLayout}</p>
-                    <p className="text-muted-foreground">Palette</p>
-                    <p className="text-right text-xs leading-5">{activeOption?.artParams.paletteId ?? '-'}</p>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border bg-card/50 p-3 space-y-2">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-2">
-                    <Layers3 className="w-3.5 h-3.5" />
-                    Composition
-                  </p>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    {isLegacyLayout(activeLayout) ? (
-                      <>
-                        <p className="text-muted-foreground">Shape Types</p>
-                        <p className="text-right">{activeOption?.artParams.shapeTypes.join(', ') ?? '-'}</p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-muted-foreground">Effective Geometry</p>
-                        <p className="text-right">{effectiveGeometry}</p>
-                        <p className="text-muted-foreground">Shape Style</p>
-                        <p className="text-right capitalize">{activeOption?.artParams.shapeStyle ?? '-'}</p>
-                      </>
-                    )}
-                    <p className="text-muted-foreground">Complexity</p>
-                    <p className="text-right">{activeOption ? formatValue(activeOption.artParams.complexity) : '-'}</p>
-                    <p className="text-muted-foreground">Layers</p>
-                    <p className="text-right">{activeOption?.artParams.layerCount ?? '-'}</p>
-                    <p className="text-muted-foreground">Position Bias</p>
-                    <p className="text-right capitalize">{activeOption?.artParams.positionBias ?? '-'}</p>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border bg-card/50 p-3 space-y-2">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Mood JSON</p>
-                  <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-md border bg-muted/30 p-2 text-xs leading-5 text-foreground">
-                    {preview?.debug?.rawModelJson
-                      ? JSON.stringify(preview.debug.rawModelJson, null, 2)
-                      : '-'}
-                  </pre>
-                </div>
-              </CardContent>
-            </Card>
+            <OptionComparePanel
+              loading={loading}
+              preview={preview}
+              options={options}
+              selectedOptionId={selectedOptionId}
+              saving={saving}
+              savedId={savedId}
+              onSelectOption={setSelectedOptionId}
+              onSave={handleSave}
+            />
+            <GenerationInspector
+              loading={loading}
+              stepIndex={stepIndex}
+              preview={preview}
+              activeOption={activeOption}
+            />
           </div>
         </section>
       )}
 
-      <section>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-semibold tracking-tight">Recent Artworks</h2>
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/gallery">View All</Link>
-          </Button>
-        </div>
-
-        {galleryLoading ? (
-          <div className="text-center py-8 text-muted-foreground">Loading...</div>
-        ) : artworks.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            No artworks yet. Generate your first art above!
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            {artworks.map((artwork) => (
-              <div key={artwork.id} className="relative group">
-                <Link href={`/art/${artwork.id}`} className="block">
-                  <Card className="overflow-hidden hover:-translate-y-1 transition-transform">
-                    <CardContent className="p-0">
-                      <div className="aspect-square bg-secondary">
-                        <SvgArtCanvas params={artwork.artData} />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  className="absolute top-1 right-1 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleDelete(artwork.id);
-                  }}
-                >
-                  <Trash2 className="w-3 h-3" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      <RecentArtworks artworks={artworks} loading={galleryLoading} onDelete={handleDelete} />
     </div>
   );
 }

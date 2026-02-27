@@ -3,23 +3,16 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import type { ArtParams } from '@/components/SvgArtCanvas';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Trash2 } from 'lucide-react';
+import type { ArtworkData } from '@/lib/api/types';
+import { deleteArtwork, listArtworks } from '@/lib/api/art-client';
 
 const SvgArtCanvas = dynamic(() => import('@/components/SvgArtCanvas'), {
   ssr: false,
   loading: () => <div className="aspect-square bg-secondary" />,
 });
-
-interface ArtworkData {
-  id: string;
-  keyword: string;
-  mood: string;
-  artData: ArtParams;
-  createdAt: string;
-}
 
 export default function GalleryPage() {
   const [artworks, setArtworks] = useState<ArtworkData[]>([]);
@@ -30,12 +23,10 @@ export default function GalleryPage() {
   useEffect(() => {
     async function fetchArtworks() {
       try {
-        const response = await fetch('/api/art');
-        if (!response.ok) throw new Error('Failed to fetch');
-        const data = await response.json();
+        const data = await listArtworks();
         setArtworks(data.artworks);
       } catch (err) {
-        setError('Failed to load artworks');
+        setError(err instanceof Error ? err.message : 'Failed to load artworks');
         console.error(err);
       } finally {
         setLoading(false);
@@ -49,9 +40,8 @@ export default function GalleryPage() {
 
     setDeletingId(id);
     try {
-      const response = await fetch(`/api/art/${id}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error('Failed to delete');
-      setArtworks(artworks.filter((a) => a.id !== id));
+      await deleteArtwork(id);
+      setArtworks((prev) => prev.filter((a) => a.id !== id));
     } catch {
       alert('Failed to delete artwork');
     } finally {
@@ -71,9 +61,7 @@ export default function GalleryPage() {
       ) : error ? (
         <div className="text-center py-12 text-destructive">{error}</div>
       ) : artworks.length === 0 ? (
-        <div className="text-center py-20 text-muted-foreground">
-          No artworks yet. Generate your first art above!
-        </div>
+        <div className="text-center py-20 text-muted-foreground">No artworks yet. Generate your first art above!</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {artworks.map((artwork) => (

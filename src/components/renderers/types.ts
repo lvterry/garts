@@ -1,4 +1,4 @@
-import type { ArtParams } from '@/components/SvgArtCanvas';
+import type { ArtParams } from '@/lib/art/types';
 
 export interface RendererResult {
   defs: JSX.Element[];

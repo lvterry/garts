@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 describe('Generation Inspector structure', () => {
-  const pagePath = path.resolve(process.cwd(), 'src/app/page.tsx');
+  const pagePath = path.resolve(process.cwd(), 'src/components/home/GenerationInspector.tsx');
   const source = readFileSync(pagePath, 'utf8');
 
   it('keeps only three target inspector sections', () => {
@@ -18,7 +18,7 @@ describe('Generation Inspector structure', () => {
   });
 
   it('shows composition fields by effective layout semantics', () => {
-    expect(source).toContain('resolveEffectiveLayout');
+    expect(source).toContain('resolveLayoutAlgorithm');
     expect(source).toContain('isLegacyLayout');
     expect(source).toContain('getEffectiveGeometryLabel');
     expect(source).toContain('Effective Geometry');
