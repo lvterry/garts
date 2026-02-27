@@ -32,6 +32,12 @@ interface PreviewData {
   mood: string;
   artParams: ArtParams;
   options?: PreviewOption[];
+  debug?: {
+    confidence?: number | null;
+    semanticProfile?: Record<string, unknown> | null;
+    pipelinePath?: 'direct-semantic' | 'expand-then-extract';
+    rawModelJson?: Record<string, unknown> | null;
+  };
 }
 
 interface PreviewOption {
@@ -397,7 +403,11 @@ export default function Home() {
                     <p className="text-right">{activeOption?.label ?? '-'}</p>
                     <p className="text-muted-foreground">Seed</p>
                     <p className="text-right">{activeOption?.artParams.seed ?? '-'}</p>
-                    <p className="text-muted-foreground">Algorithm</p>
+                    <p className="text-muted-foreground">Layout</p>
+                    <p className="text-right text-xs leading-5">{activeOption?.artParams.layoutAlgorithm ?? '-'}</p>
+                    <p className="text-muted-foreground">Shape Style</p>
+                    <p className="text-right text-xs leading-5">{activeOption?.artParams.shapeStyle ?? '-'}</p>
+                    <p className="text-muted-foreground">Legacy Algorithm</p>
                     <p className="text-right text-xs leading-5">{activeOption?.artParams.renderAlgorithm ?? 'legacy-shapes'}</p>
                     <p className="text-muted-foreground">Palette</p>
                     <p className="text-right text-xs leading-5">{activeOption?.artParams.paletteId ?? '-'}</p>
@@ -485,6 +495,15 @@ export default function Home() {
                       {!activeOption && <span className="text-xs text-muted-foreground">-</span>}
                     </div>
                   </div>
+                </div>
+
+                <div className="rounded-lg border bg-card/50 p-3 space-y-2">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Raw JSON</p>
+                  <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-md border bg-muted/30 p-2 text-xs leading-5 text-foreground">
+                    {preview?.debug?.rawModelJson
+                      ? JSON.stringify(preview.debug.rawModelJson, null, 2)
+                      : '-'}
+                  </pre>
                 </div>
               </CardContent>
             </Card>

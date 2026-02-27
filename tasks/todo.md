@@ -447,3 +447,36 @@ Fully remove `curves` from the shape system (generation + rendering + tests) wit
   - `npm test`: pass (27/27)
   - `npx tsc --noEmit`: pass
   - `npm run lint`: pass with one existing warning in `src/app/layout.tsx` (`@next/next/no-page-custom-font`)
+
+# Layout/Shape Decoupling (2026-02-27)
+
+## Goal
+Decouple layout strategy from shape style so the same layout can combine with different shape outputs, while preserving backward compatibility for existing `renderAlgorithm` data.
+
+## Action Items
+- [x] Add additive `layoutAlgorithm` + `shapeStyle` fields to generator/canvas `ArtParams` types.
+- [x] Keep `renderAlgorithm` as a backward-compatibility field and map between legacy/new fields.
+- [x] Split generator selection into independent layout selection and shape-style selection logic.
+- [x] Update variation distance/summary to account for layout and shape-style deltas.
+- [x] Update renderer dispatcher to route by layout algorithm and let renderer output vary by shape style.
+- [x] Update API debug payload and homepage inspector to expose decoupled fields.
+- [x] Update/add tests for decoupled selection behavior and compatibility defaults.
+- [x] Run verification tests.
+
+## Review
+- Status: Implemented
+- Files changed:
+  - `src/lib/art-generator/index.ts`
+  - `src/components/SvgArtCanvas.tsx`
+  - `src/components/renderers/flowFieldParticles.tsx`
+  - `src/components/renderers/voronoiGradients.tsx`
+  - `src/components/renderers/delaunayDepthBlur.tsx`
+  - `src/components/renderers/particlesAttractors.tsx`
+  - `src/app/api/art/generate/route.ts`
+  - `src/app/page.tsx`
+  - `src/test/art-generator-variation.test.ts`
+  - `tasks/todo.md`
+- Validation:
+  - `npm test -- src/test/art-generator-variation.test.ts src/test/svg-art-canvas.test.ts src/test/art-generate.test.ts`: pass
+  - `npx tsc --noEmit`: pass
+  - `npm run lint`: pass with one existing warning in `src/app/layout.tsx` (`@next/next/no-page-custom-font`)

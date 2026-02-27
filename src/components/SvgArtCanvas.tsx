@@ -26,6 +26,8 @@ export interface ArtParams {
     | 'delaunay-depth-blur'
     | 'particles-attractors'
     | 'legacy-shapes';
+  layoutAlgorithm?: 'flow-field' | 'voronoi' | 'delaunay' | 'attractors' | 'legacy';
+  shapeStyle?: 'linework' | 'point-cloud' | 'mesh';
   paletteId?: string;
   paletteFamily?: 'coolors-inspired' | 'chromotome-inspired' | 'generativepalettes-inspired';
   noisePlacement?: {
@@ -301,17 +303,37 @@ function renderLegacy(params: ArtParams, width: number, height: number): Rendere
 }
 
 function renderByAlgorithm(params: ArtParams, width: number, height: number): RendererResult {
-  switch (params.renderAlgorithm) {
-    case 'flow-field-particles':
+  const layout = resolveLayoutAlgorithm(params);
+  switch (layout) {
+    case 'flow-field':
       return renderFlowFieldParticles({ params, width, height });
-    case 'voronoi-gradients':
+    case 'voronoi':
       return renderVoronoiGradients({ params, width, height });
-    case 'delaunay-depth-blur':
+    case 'delaunay':
       return renderDelaunayDepthBlur({ params, width, height });
-    case 'particles-attractors':
+    case 'attractors':
       return renderParticlesAttractors({ params, width, height });
     default:
       return renderLegacy(params, width, height);
+  }
+}
+
+function resolveLayoutAlgorithm(params: ArtParams): NonNullable<ArtParams['layoutAlgorithm']> {
+  if (params.layoutAlgorithm) {
+    return params.layoutAlgorithm;
+  }
+
+  switch (params.renderAlgorithm) {
+    case 'flow-field-particles':
+      return 'flow-field';
+    case 'voronoi-gradients':
+      return 'voronoi';
+    case 'delaunay-depth-blur':
+      return 'delaunay';
+    case 'particles-attractors':
+      return 'attractors';
+    default:
+      return 'legacy';
   }
 }
 
@@ -320,8 +342,8 @@ export default function SvgArtCanvas({ params }: SvgArtCanvasProps) {
   const height = DEFAULT_SIZE;
   const bgColor = params.backgroundColors?.[0] || '#0a0a12';
 
-  const mode = params.renderAlgorithm ?? 'legacy-shapes';
-  const renderResult = mode === 'legacy-shapes'
+  const mode = resolveLayoutAlgorithm(params);
+  const renderResult = mode === 'legacy'
     ? renderLegacy(params, width, height)
     : renderByAlgorithm(params, width, height);
 

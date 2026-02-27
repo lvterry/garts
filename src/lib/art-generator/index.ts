@@ -21,6 +21,8 @@ export interface ArtParams {
     | 'delaunay-depth-blur'
     | 'particles-attractors'
     | 'legacy-shapes';
+  layoutAlgorithm?: 'flow-field' | 'voronoi' | 'delaunay' | 'attractors' | 'legacy';
+  shapeStyle?: 'linework' | 'point-cloud' | 'mesh';
   paletteId?: string;
   paletteFamily?: PaletteFamily;
   noisePlacement?: {
@@ -79,12 +81,13 @@ const CALM_MOOD_COMPLEXITY_FLOOR: Record<string, number> = {
   peaceful: 2,
   melancholic: 2,
 };
-const RENDER_ALGORITHMS: Array<NonNullable<ArtParams['renderAlgorithm']>> = [
-  'flow-field-particles',
-  'voronoi-gradients',
-  'delaunay-depth-blur',
-  'particles-attractors',
+const LAYOUT_ALGORITHMS: Array<Exclude<NonNullable<ArtParams['layoutAlgorithm']>, 'legacy'>> = [
+  'flow-field',
+  'voronoi',
+  'delaunay',
+  'attractors',
 ];
+const SHAPE_STYLES: Array<NonNullable<ArtParams['shapeStyle']>> = ['linework', 'point-cloud', 'mesh'];
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -94,31 +97,121 @@ function normalizeSeed(seed: number): number {
   return Math.abs(seed) % 1_000_000;
 }
 
-function ensureRenderAlgorithm(value: ArtParams['renderAlgorithm']): NonNullable<ArtParams['renderAlgorithm']> {
-  return value && RENDER_ALGORITHMS.includes(value) ? value : 'legacy-shapes';
+function legacyToLayoutAlgorithm(value: ArtParams['renderAlgorithm']): NonNullable<ArtParams['layoutAlgorithm']> {
+  switch (value) {
+    case 'flow-field-particles':
+      return 'flow-field';
+    case 'voronoi-gradients':
+      return 'voronoi';
+    case 'delaunay-depth-blur':
+      return 'delaunay';
+    case 'particles-attractors':
+      return 'attractors';
+    default:
+      return 'legacy';
+  }
 }
 
-function selectRenderAlgorithm(
+function layoutToLegacyAlgorithm(value: ArtParams['layoutAlgorithm']): NonNullable<ArtParams['renderAlgorithm']> {
+  switch (value) {
+    case 'flow-field':
+      return 'flow-field-particles';
+    case 'voronoi':
+      return 'voronoi-gradients';
+    case 'delaunay':
+      return 'delaunay-depth-blur';
+    case 'attractors':
+      return 'particles-attractors';
+    default:
+      return 'legacy-shapes';
+  }
+}
+
+function ensureLayoutAlgorithm(
+  value: ArtParams['layoutAlgorithm'],
+  renderAlgorithm?: ArtParams['renderAlgorithm']
+): NonNullable<ArtParams['layoutAlgorithm']> {
+  if (value && (value === 'legacy' || LAYOUT_ALGORITHMS.includes(value))) {
+    return value;
+  }
+
+  return legacyToLayoutAlgorithm(renderAlgorithm);
+}
+
+function defaultShapeStyleForLayout(layout: NonNullable<ArtParams['layoutAlgorithm']>): NonNullable<ArtParams['shapeStyle']> {
+  switch (layout) {
+    case 'flow-field':
+      return 'linework';
+    case 'voronoi':
+      return 'mesh';
+    case 'delaunay':
+      return 'mesh';
+    case 'attractors':
+      return 'point-cloud';
+    default:
+      return 'linework';
+  }
+}
+
+function ensureShapeStyle(
+  value: ArtParams['shapeStyle'],
+  layout: NonNullable<ArtParams['layoutAlgorithm']>
+): NonNullable<ArtParams['shapeStyle']> {
+  return value && SHAPE_STYLES.includes(value) ? value : defaultShapeStyleForLayout(layout);
+}
+
+function selectLayoutAlgorithm(
   mood: string,
   semanticProfile: SemanticProfile | undefined,
   seed: number,
   optionIndex: number
-): NonNullable<ArtParams['renderAlgorithm']> {
+): NonNullable<ArtParams['layoutAlgorithm']> {
   const normalizedMood = mood.toLowerCase();
   const energy = clamp(semanticProfile?.energy ?? 0.5, 0, 1);
   const calmSet = new Set(['serene', 'peaceful', 'ethereal', 'melancholic']);
   const intenseSet = new Set(['chaotic', 'intense', 'energetic', 'ominous']);
 
-  let preferred: Array<NonNullable<ArtParams['renderAlgorithm']>>;
+  let preferred: Array<NonNullable<ArtParams['layoutAlgorithm']>>;
   if (calmSet.has(normalizedMood) || energy < 0.38) {
-    preferred = ['voronoi-gradients', 'flow-field-particles', 'particles-attractors', 'delaunay-depth-blur'];
+    preferred = ['voronoi', 'flow-field', 'attractors', 'delaunay'];
   } else if (intenseSet.has(normalizedMood) || energy > 0.72) {
-    preferred = ['delaunay-depth-blur', 'particles-attractors', 'flow-field-particles', 'voronoi-gradients'];
+    preferred = ['delaunay', 'attractors', 'flow-field', 'voronoi'];
   } else {
-    preferred = ['flow-field-particles', 'voronoi-gradients', 'particles-attractors', 'delaunay-depth-blur'];
+    preferred = ['flow-field', 'voronoi', 'attractors', 'delaunay'];
   }
 
   const pick = Math.floor(seededRandom(seed + optionIndex * 43) * preferred.length);
+  return preferred[pick] ?? preferred[0];
+}
+
+function selectShapeStyle(
+  mood: string,
+  semanticProfile: SemanticProfile | undefined,
+  seed: number,
+  optionIndex: number,
+  layout: NonNullable<ArtParams['layoutAlgorithm']>
+): NonNullable<ArtParams['shapeStyle']> {
+  const normalizedMood = mood.toLowerCase();
+  const energy = clamp(semanticProfile?.energy ?? 0.5, 0, 1);
+  const calmSet = new Set(['serene', 'peaceful', 'ethereal', 'melancholic']);
+  const intenseSet = new Set(['chaotic', 'intense', 'energetic', 'ominous']);
+
+  let preferred: Array<NonNullable<ArtParams['shapeStyle']>>;
+  if (layout === 'voronoi' || layout === 'delaunay') {
+    preferred = ['mesh', 'linework', 'point-cloud'];
+  } else if (layout === 'flow-field' || layout === 'attractors') {
+    preferred = ['linework', 'point-cloud', 'mesh'];
+  } else {
+    preferred = ['linework', 'mesh', 'point-cloud'];
+  }
+
+  if (calmSet.has(normalizedMood) || energy < 0.38) {
+    preferred = [...preferred].sort((a, b) => (a === 'mesh' ? -1 : 0) - (b === 'mesh' ? -1 : 0));
+  } else if (intenseSet.has(normalizedMood) || energy > 0.72) {
+    preferred = [...preferred].sort((a, b) => (a === 'linework' ? -1 : 0) - (b === 'linework' ? -1 : 0));
+  }
+
+  const pick = Math.floor(seededRandom(seed + optionIndex * 59 + 7) * preferred.length);
   return preferred[pick] ?? preferred[0];
 }
 
@@ -643,6 +736,10 @@ function shapeDistance(left: string[], right: string[]): number {
 }
 
 export function computeOptionDistance(a: ArtParams, b: ArtParams): number {
+  const leftLayout = ensureLayoutAlgorithm(a.layoutAlgorithm, a.renderAlgorithm);
+  const rightLayout = ensureLayoutAlgorithm(b.layoutAlgorithm, b.renderAlgorithm);
+  const leftShapeStyle = ensureShapeStyle(a.shapeStyle, leftLayout);
+  const rightShapeStyle = ensureShapeStyle(b.shapeStyle, rightLayout);
   const noiseDelta = a.noisePlacement && b.noisePlacement
     ? (
       Math.abs(a.noisePlacement.scale - b.noisePlacement.scale) * 35 +
@@ -663,7 +760,8 @@ export function computeOptionDistance(a: ArtParams, b: ArtParams): number {
     Math.abs(a.layerCount - b.layerCount) / 2,
     a.positionBias === b.positionBias ? 0 : 1,
     shapeDistance(a.shapeTypes, b.shapeTypes),
-    ensureRenderAlgorithm(a.renderAlgorithm) === ensureRenderAlgorithm(b.renderAlgorithm) ? 0 : 1,
+    leftLayout === rightLayout ? 0 : 1,
+    leftShapeStyle === rightShapeStyle ? 0 : 1,
     (a.paletteId ?? '') === (b.paletteId ?? '') ? 0 : 1,
     noiseDelta,
   ];
@@ -704,8 +802,17 @@ export function summarizeVariation(baseParams: ArtParams, variedParams: ArtParam
     changes.push(`shapeTypes:${baseParams.shapeTypes.join('|')}->${variedParams.shapeTypes.join('|')}`);
   }
 
-  if (ensureRenderAlgorithm(baseParams.renderAlgorithm) !== ensureRenderAlgorithm(variedParams.renderAlgorithm)) {
-    changes.push(`algorithm:${ensureRenderAlgorithm(baseParams.renderAlgorithm)}->${ensureRenderAlgorithm(variedParams.renderAlgorithm)}`);
+  const baseLayout = ensureLayoutAlgorithm(baseParams.layoutAlgorithm, baseParams.renderAlgorithm);
+  const variedLayout = ensureLayoutAlgorithm(variedParams.layoutAlgorithm, variedParams.renderAlgorithm);
+  const baseShapeStyle = ensureShapeStyle(baseParams.shapeStyle, baseLayout);
+  const variedShapeStyle = ensureShapeStyle(variedParams.shapeStyle, variedLayout);
+
+  if (baseLayout !== variedLayout) {
+    changes.push(`layout:${baseLayout}->${variedLayout}`);
+  }
+
+  if (baseShapeStyle !== variedShapeStyle) {
+    changes.push(`shapeStyle:${baseShapeStyle}->${variedShapeStyle}`);
   }
 
   if ((baseParams.paletteId ?? '') !== (variedParams.paletteId ?? '')) {
@@ -771,7 +878,9 @@ function createBaseParams(
     1,
     10
   );
-  const algorithm = selectRenderAlgorithm(normalizedMood, semanticProfile, seed + hashSeed, 0);
+  const layoutAlgorithm = selectLayoutAlgorithm(normalizedMood, semanticProfile, seed + hashSeed, 0);
+  const shapeStyle = selectShapeStyle(normalizedMood, semanticProfile, seed + hashSeed, 0, layoutAlgorithm);
+  const legacyRenderAlgorithm = layoutToLegacyAlgorithm(layoutAlgorithm);
 
   const baseParams: ArtParams = {
     seed,
@@ -795,7 +904,9 @@ function createBaseParams(
     positionBias: kwProps.positionBias,
     strokeWidth: clamp(kwProps.strokeWidth + (energy > 0.8 ? 1 : 0), 1, 7),
     layerCount: kwProps.layerCount,
-    renderAlgorithm: algorithm,
+    renderAlgorithm: legacyRenderAlgorithm,
+    layoutAlgorithm,
+    shapeStyle,
     paletteId,
     paletteFamily,
     noisePlacement: buildNoisePlacement(seed + 271, energy, baseComplexity, 0),
@@ -847,9 +958,20 @@ function applyControlledVariation(
     variationContext.optionIndex,
     5
   );
-  const variedAlgorithm = strength > 0.45
-    ? selectRenderAlgorithm(baseParams.mood, semanticProfile, variationSeed + 991, variationContext.optionIndex)
-    : ensureRenderAlgorithm(baseParams.renderAlgorithm);
+  const baseLayout = ensureLayoutAlgorithm(baseParams.layoutAlgorithm, baseParams.renderAlgorithm);
+  const baseShapeStyle = ensureShapeStyle(baseParams.shapeStyle, baseLayout);
+  const variedLayout = strength > 0.45
+    ? selectLayoutAlgorithm(baseParams.mood, semanticProfile, variationSeed + 991, variationContext.optionIndex)
+    : baseLayout;
+  const variedShapeStyle = strength > 0.35
+    ? selectShapeStyle(
+        baseParams.mood,
+        semanticProfile,
+        variationSeed + 1111,
+        variationContext.optionIndex,
+        variedLayout
+      )
+    : baseShapeStyle;
   const valence = semanticProfile?.valence ?? 0;
   const variedPalette = selectCuratedPalette({
     mood: baseParams.mood,
@@ -881,7 +1003,9 @@ function applyControlledVariation(
     positionBias: varyPositionBias(baseParams.positionBias, variationSeed, strength),
     strokeWidth: varyInt(baseParams.strokeWidth, 1, 7, variationSeed, 606, strength, variationContext.optionIndex, 3),
     layerCount: varyInt(baseParams.layerCount, 1, 3, variationSeed, 707, strength, variationContext.optionIndex, 2),
-    renderAlgorithm: variedAlgorithm,
+    renderAlgorithm: layoutToLegacyAlgorithm(variedLayout),
+    layoutAlgorithm: variedLayout,
+    shapeStyle: variedShapeStyle,
     paletteId: variedPalette.paletteId,
     paletteFamily: variedPalette.paletteFamily,
     colors: variedPalette.shapeColors,

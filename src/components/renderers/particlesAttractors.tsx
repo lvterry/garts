@@ -20,6 +20,7 @@ export function renderParticlesAttractors({ params, width, height }: RendererCon
   }
 
   const elements: JSX.Element[] = [];
+  const shapeStyle = params.shapeStyle ?? 'point-cloud';
 
   for (let i = 0; i < particleCount; i++) {
     let x = seededRandom(params.seed + i * 13, 0, width);
@@ -27,7 +28,7 @@ export function renderParticlesAttractors({ params, width, height }: RendererCon
     let vx = 0;
     let vy = 0;
 
-    let d = `M ${x.toFixed(2)} ${y.toFixed(2)}`;
+    const points: Array<{ x: number; y: number }> = [{ x, y }];
 
     for (let step = 0; step < stepCount; step++) {
       let fx = 0;
@@ -56,7 +57,32 @@ export function renderParticlesAttractors({ params, width, height }: RendererCon
         break;
       }
 
-      d += ` L ${x.toFixed(2)} ${y.toFixed(2)}`;
+      points.push({ x, y });
+    }
+
+    const color = params.colors[i % params.colors.length] ?? '#ffffff';
+    const opacity = 0.08 + (i / Math.max(1, particleCount - 1)) * 0.35;
+    const d = points
+      .map((point, pointIndex) =>
+        `${pointIndex === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`
+      )
+      .join(' ');
+
+    if (shapeStyle === 'point-cloud') {
+      for (let pointIndex = 0; pointIndex < points.length; pointIndex += 2) {
+        const point = points[pointIndex];
+        elements.push(
+          <circle
+            key={`attractor-dot-${i}-${pointIndex}`}
+            cx={point.x}
+            cy={point.y}
+            r={Math.max(0.7, params.strokeWidth * 0.32)}
+            fill={hexToRgb(color)}
+            opacity={opacity * 0.8}
+          />
+        );
+      }
+      continue;
     }
 
     elements.push(
@@ -64,9 +90,9 @@ export function renderParticlesAttractors({ params, width, height }: RendererCon
         key={`attractor-path-${i}`}
         d={d}
         fill="none"
-        stroke={hexToRgb(params.colors[i % params.colors.length] ?? '#ffffff')}
-        strokeWidth={Math.max(0.8, params.strokeWidth * 0.5)}
-        opacity={0.08 + (i / Math.max(1, particleCount - 1)) * 0.35}
+        stroke={hexToRgb(color)}
+        strokeWidth={shapeStyle === 'mesh' ? Math.max(1.3, params.strokeWidth * 0.9) : Math.max(0.8, params.strokeWidth * 0.5)}
+        opacity={shapeStyle === 'mesh' ? opacity * 0.62 : opacity}
         strokeLinecap="round"
       />
     );

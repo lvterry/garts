@@ -12,6 +12,58 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function parseJsonObject(content: string): Record<string, unknown> | null {
+  const trimmed = content.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    return isRecord(parsed) ? parsed : null;
+  } catch {
+    const start = trimmed.indexOf('{');
+    const end = trimmed.lastIndexOf('}');
+    if (start === -1 || end === -1 || end <= start) {
+      return null;
+    }
+
+    try {
+      const candidate = trimmed.slice(start, end + 1);
+      const parsed = JSON.parse(candidate);
+      return isRecord(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+}
+
+function extractModelJsonFromRawResponse(rawResponse: unknown): Record<string, unknown> | null {
+  if (!isRecord(rawResponse)) {
+    return null;
+  }
+
+  const choices = Array.isArray(rawResponse.choices) ? rawResponse.choices : [];
+  const openAIContent = isRecord(choices[0]) && isRecord(choices[0].message)
+    ? choices[0].message.content
+    : null;
+  if (typeof openAIContent === 'string') {
+    return parseJsonObject(openAIContent);
+  }
+
+  const anthropicContent = Array.isArray(rawResponse.content) ? rawResponse.content : [];
+  const claudeText = isRecord(anthropicContent[0]) ? anthropicContent[0].text : null;
+  if (typeof claudeText === 'string') {
+    return parseJsonObject(claudeText);
+  }
+
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -115,8 +167,11 @@ export async function POST(request: NextRequest) {
         confidence: moodResult.confidence ?? null,
         semanticProfile: moodResult.semanticProfile ?? null,
         pipelinePath: moodResult.semanticProfile?.pipelinePath ?? 'direct-semantic',
+        rawModelJson: extractModelJsonFromRawResponse(moodResult.rawResponse),
         algorithmSelection: {
           renderAlgorithm: options[0].artParams.renderAlgorithm ?? 'legacy-shapes',
+          layoutAlgorithm: options[0].artParams.layoutAlgorithm ?? null,
+          shapeStyle: options[0].artParams.shapeStyle ?? null,
           paletteId: options[0].artParams.paletteId ?? null,
           paletteFamily: options[0].artParams.paletteFamily ?? null,
         },

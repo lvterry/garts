@@ -24,6 +24,7 @@ export function renderVoronoiGradients({ params, width, height }: RendererContex
 
   const defs: JSX.Element[] = [];
   const elements: JSX.Element[] = [];
+  const shapeStyle = params.shapeStyle ?? 'mesh';
 
   for (let i = 0; i < sites.length; i++) {
     const polygon = voronoi.cellPolygon(i);
@@ -31,8 +32,38 @@ export function renderVoronoiGradients({ params, width, height }: RendererContex
       continue;
     }
 
-    const gradientId = `voronoi-g-${params.seed}-${i}`;
     const [x, y] = sites[i];
+    const points = polygon.map((point) => `${point[0].toFixed(2)},${point[1].toFixed(2)}`).join(' ');
+
+    if (shapeStyle === 'point-cloud') {
+      elements.push(
+        <circle
+          key={`voronoi-site-${i}`}
+          cx={x}
+          cy={y}
+          r={Math.max(1.2, params.strokeWidth * 0.5)}
+          fill={params.colors[i % params.colors.length]}
+          opacity={0.55}
+        />
+      );
+      continue;
+    }
+
+    if (shapeStyle === 'linework') {
+      elements.push(
+        <polygon
+          key={`voronoi-wire-${i}`}
+          points={points}
+          fill="none"
+          opacity={0.3}
+          stroke={params.colors[i % params.colors.length]}
+          strokeWidth={Math.max(0.9, params.strokeWidth * 0.35)}
+        />
+      );
+      continue;
+    }
+
+    const gradientId = `voronoi-g-${params.seed}-${i}`;
     const field = fbm2D(params.seed + 991, x * scale, y * scale, octaves, lacunarity, gain);
     const angle = field * Math.PI * 2;
     const radius = 60;
@@ -51,8 +82,6 @@ export function renderVoronoiGradients({ params, width, height }: RendererContex
         <stop offset="100%" stopColor={params.colors[(i + 1) % params.colors.length]} />
       </linearGradient>
     );
-
-    const points = polygon.map((point) => `${point[0].toFixed(2)},${point[1].toFixed(2)}`).join(' ');
 
     elements.push(
       <polygon

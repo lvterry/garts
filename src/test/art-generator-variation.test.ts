@@ -107,6 +107,9 @@ describe('art-generator controlled variation', () => {
 
     expect(params.renderAlgorithm).toBeDefined();
     expect(params.renderAlgorithm).not.toBe('legacy-shapes');
+    expect(params.layoutAlgorithm).toBeDefined();
+    expect(params.layoutAlgorithm).not.toBe('legacy');
+    expect(params.shapeStyle).toBeDefined();
     expect(params.paletteId).toBeDefined();
     expect(isKnownPaletteId(params.paletteId ?? '')).toBe(true);
     expect(params.paletteFamily).toBeDefined();

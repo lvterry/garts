@@ -31,6 +31,7 @@ export function renderDelaunayDepthBlur({ params, width, height }: RendererConte
 
   const elements: JSX.Element[] = [];
   const triangles = delaunay.triangles;
+  const shapeStyle = params.shapeStyle ?? 'mesh';
 
   for (let i = 0; i < triangles.length; i += 3) {
     const a = points[triangles[i]];
@@ -45,11 +46,40 @@ export function renderDelaunayDepthBlur({ params, width, height }: RendererConte
 
     const color = params.colors[(i / 3) % params.colors.length];
     const opacity = 0.18 + (1 - depth) * 0.45;
+    const trianglePoints = `${a[0].toFixed(2)},${a[1].toFixed(2)} ${b[0].toFixed(2)},${b[1].toFixed(2)} ${c[0].toFixed(2)},${c[1].toFixed(2)}`;
+
+    if (shapeStyle === 'point-cloud') {
+      elements.push(
+        <circle
+          key={`tri-point-${i}`}
+          cx={cx}
+          cy={cy}
+          r={Math.max(1, params.strokeWidth * 0.45)}
+          fill={color}
+          opacity={opacity * 0.75}
+        />
+      );
+      continue;
+    }
+
+    if (shapeStyle === 'linework') {
+      elements.push(
+        <polygon
+          key={`tri-line-${i}`}
+          points={trianglePoints}
+          fill="none"
+          stroke={color}
+          strokeWidth={Math.max(0.8, params.strokeWidth * 0.35)}
+          opacity={opacity * 0.68}
+        />
+      );
+      continue;
+    }
 
     elements.push(
       <polygon
         key={`tri-${i}`}
-        points={`${a[0].toFixed(2)},${a[1].toFixed(2)} ${b[0].toFixed(2)},${b[1].toFixed(2)} ${c[0].toFixed(2)},${c[1].toFixed(2)}`}
+        points={trianglePoints}
         fill={color}
         opacity={opacity}
         filter={`url(#depth-blur-${params.seed}-${layerIndex})`}
