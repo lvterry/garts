@@ -537,3 +537,25 @@ Implement low-risk structural refactor for single-source art types/layout mappin
 - Validation:
   - `npx tsc --noEmit`: pass
   - `npm test`: pass (37/37)
+
+# Commit Bug Audit Follow-up (2026-03-01)
+
+## Goal
+Apply minimal safety fixes found while scanning recent commits for likely runtime regressions.
+
+## Action Items
+- [x] Guard API client success-path JSON parsing so invalid/empty JSON does not return `null` as typed payload.
+- [x] URL-encode artwork IDs in API client path helpers.
+- [x] Defensively render `shapeTypes` in inspector/detail pages to avoid crashes on malformed legacy records.
+- [x] Run targeted tests and lint.
+
+## Review
+- Status: Completed
+- Files changed:
+  - `src/lib/api/art-client.ts`
+  - `src/components/home/GenerationInspector.tsx`
+  - `src/app/art/[id]/page.tsx`
+  - `tasks/todo.md`
+- Validation:
+  - `npm test -- src/test/art-client.test.ts src/test/page-inspector.test.ts src/test/layout-mapping.test.ts`: pass (8/8)
+  - `npm run lint`: pass with existing warning in `src/app/layout.tsx` (`@next/next/no-page-custom-font`)

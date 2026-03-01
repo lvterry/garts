@@ -113,7 +113,7 @@ export function GenerationInspector({ loading, stepIndex, preview, activeOption 
             {isLegacyLayout(activeLayout) ? (
               <>
                 <p className="text-muted-foreground">Shape Types</p>
-                <p className="text-right">{activeOption?.artParams.shapeTypes.join(', ') ?? '-'}</p>
+                <p className="text-right">{(activeOption?.artParams.shapeTypes ?? []).join(', ') || '-'}</p>
               </>
             ) : (
               <>

@@ -4,6 +4,7 @@ import {
   layoutToRenderAlgorithm,
   renderToLayoutAlgorithm,
   resolveLayoutAlgorithm,
+  resolveShapeStyle,
 } from '@/lib/art/layout';
 
 describe('layout mapping', () => {
@@ -22,5 +23,10 @@ describe('layout mapping', () => {
     expect(layoutToRenderAlgorithm('legacy')).toBe('legacy-shapes');
     expect(resolveLayoutAlgorithm({ renderAlgorithm: 'legacy-shapes' })).toBe('legacy');
     expect(isLegacyLayout('legacy')).toBe(true);
+  });
+
+  it('defaults delaunay shapeStyle to linework when unspecified', () => {
+    expect(resolveShapeStyle(undefined, 'delaunay')).toBe('linework');
+    expect(resolveShapeStyle('mesh', 'delaunay')).toBe('mesh');
   });
 });

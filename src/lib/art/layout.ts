@@ -58,7 +58,7 @@ function defaultShapeStyleForLayout(layout: LayoutAlgorithm): ShapeStyle {
     case 'voronoi':
       return 'mesh';
     case 'delaunay':
-      return 'mesh';
+      return 'linework';
     case 'attractors':
       return 'point-cloud';
     default:

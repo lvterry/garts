@@ -28,6 +28,10 @@ async function requestJson<T>(input: RequestInfo, init?: RequestInit, fallbackEr
     throw new Error(extractErrorMessage(payload, fallbackError));
   }
 
+  if (payload == null) {
+    throw new Error(fallbackError);
+  }
+
   return payload as T;
 }
 
@@ -74,9 +78,13 @@ export async function listArtworks(params?: { limit?: number; offset?: number })
 }
 
 export async function getArtwork(id: string): Promise<ArtworkData> {
-  return requestJson<ArtworkData>(`/api/art/${id}`, undefined, 'Artwork not found');
+  return requestJson<ArtworkData>(`/api/art/${encodeURIComponent(id)}`, undefined, 'Artwork not found');
 }
 
 export async function deleteArtwork(id: string): Promise<{ success: boolean }> {
-  return requestJson<{ success: boolean }>(`/api/art/${id}`, { method: 'DELETE' }, 'Failed to delete artwork');
+  return requestJson<{ success: boolean }>(
+    `/api/art/${encodeURIComponent(id)}`,
+    { method: 'DELETE' },
+    'Failed to delete artwork'
+  );
 }
